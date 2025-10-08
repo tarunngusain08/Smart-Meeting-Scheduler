@@ -29,28 +29,17 @@ export function LandingPage({ onSignIn }: LandingPageProps) {
         <div className="max-w-7xl mx-auto p-6">
           <div className="flex items-center space-x-3">
             {/* Gruve Logo */}
-            <div className="w-12 h-12 bg-[#5b9a68] rounded-xl shadow-lg flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path 
-                  d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.5 0 2.9-.33 4.18-.93"
-                  stroke="white" 
-                  strokeWidth="2.5" 
-                  strokeLinecap="round"
-                  fill="none"
+            <div className="w-12 h-12 bg-[#5b9a68] rounded-xl shadow-lg flex items-center justify-center hover:scale-110 hover:rotate-3 transition-transform duration-300 cursor-pointer overflow-hidden">
+                <img
+                  src="/images/gruve-logo.png"
+                  alt="Gruve Logo"
+                  className="w-8 h-8 object-contain"
                 />
-                <path 
-                  d="M12 6c3.31 0 6 2.69 6 6 0 .9-.2 1.75-.55 2.51"
-                  stroke="white" 
-                  strokeWidth="2.5" 
-                  strokeLinecap="round"
-                  fill="none"
-                />
-                <circle cx="12" cy="12" r="2" fill="white" />
-              </svg>
-            </div>
+              </div>
+            
             <div>
               <span className="text-2xl font-bold text-gray-900">Gruve</span>
-              <span className="text-xs text-gray-500 ml-1">Scheduler</span>
+              <span className="text-s text-gray-500 ml-1">Scheduler</span>
             </div>
           </div>
         </div>
@@ -66,7 +55,7 @@ export function LandingPage({ onSignIn }: LandingPageProps) {
           </div>
 
           {/* Hero Headline */}
-          <h1 className="text-5xl md:text-6xl font-bold text-center mb-6">
+          <h1 className="text-5xl md:text-2xl font-bold text-center mb-6">
             <span className="text-gray-900">Smart scheduling</span>
             <br />
             <span className="text-[#00B140]">made easy with AI</span>
@@ -131,7 +120,7 @@ export function LandingPage({ onSignIn }: LandingPageProps) {
           </div>
 
           {/* Statistics Section */}
-          <div className="bg-gradient-to-r from-[#00B140] to-green-600 rounded-3xl p-12 shadow-2xl">
+          {/* <div className="bg-gradient-to-r from-[#00B140] to-green-600 rounded-3xl p-12 shadow-2xl">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-white text-center">
               <div>
                 <div className="text-5xl font-bold mb-2">10×</div>
@@ -146,15 +135,15 @@ export function LandingPage({ onSignIn }: LandingPageProps) {
                 <div className="text-green-100">AI Assistance</div>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
-      </main>
+      
 
       {/* Footer */}
       <footer className="relative z-10 text-center text-sm text-gray-500 py-8 mt-16">
         <p>© 2025 Gruve Scheduler. All rights reserved.</p>
       </footer>
-
+    </main>
 
     </div>
   );

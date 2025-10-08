@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+
 import {
   Send,
   Bot,
@@ -136,29 +137,12 @@ export function ChatInterface({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               {/* Gruve Logo */}
-              <div className="w-10 h-10 bg-[#5b9a68] rounded-xl shadow-lg flex items-center justify-center hover:scale-110 hover:rotate-3 transition-transform duration-300 cursor-pointer">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <path
-                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.5 0 2.9-.33 4.18-.93"
-                    stroke="white"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    fill="none"
-                  />
-                  <path
-                    d="M12 6c3.31 0 6 2.69 6 6 0 .9-.2 1.75-.55 2.51"
-                    stroke="white"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    fill="none"
-                  />
-                  <circle cx="12" cy="12" r="2" fill="white" />
-                </svg>
+              <div className="w-10 h-10 bg-[#5b9a68] rounded-xl shadow-lg flex items-center justify-center hover:scale-110 hover:rotate-3 transition-transform duration-300 cursor-pointer overflow-hidden">
+                <img
+                  src="/images/gruve-logo.png"
+                  alt="Gruve Logo"
+                  className="w-8 h-8 object-contain"
+                />
               </div>
               <div>
                 <div className="flex items-center space-x-2">
