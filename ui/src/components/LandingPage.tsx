@@ -1,11 +1,6 @@
-import React from 'react';
 import { Bot, Globe, Zap, Users } from 'lucide-react';
 
-interface LandingPageProps {
-  onSignIn: () => void;
-}
-
-export function LandingPage({ onSignIn }: LandingPageProps) {
+export function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-green-50 relative overflow-hidden">
       {/* Animated Background Blobs */}
@@ -69,8 +64,12 @@ export function LandingPage({ onSignIn }: LandingPageProps) {
           {/* Microsoft Teams Login Button */}
           <div className="mb-8">
             <button
-              onClick={onSignIn}
-              className="group inline-flex items-center space-x-3 bg-white border-2 border-gray-300 rounded-xl px-8 py-4 text-lg font-semibold text-gray-700 hover:border-[#00B140] hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+              onClick={() => {
+                // Use the exact redirect URI that's configured in Azure portal
+                const redirectUri = 'http://localhost:8080/auth/callback'; // This must match Azure exactly
+                window.location.href = `http://localhost:8080/auth/login?redirect_uri=${encodeURIComponent(redirectUri)}`;
+              }}
+              className="group inline-flex items-center space-x-3 bg-white border-2 border-gray-300 rounded-xl px-8 py-4 text-lg font-semibold text-gray-700 hover:border-[#00B140] hover:shadow-xl transform hover:scale-105 transition-all duration-300 cursor-pointer"
             >
               {/* Microsoft Teams Icon */}
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
