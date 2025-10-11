@@ -155,7 +155,7 @@ export function ChatInterface({
             </div>
             <button
               onClick={onSignOut}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors duration-200"
+              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors duration-200 cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
               <span className="text-sm">Sign Out</span>
