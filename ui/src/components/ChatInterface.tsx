@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
+import { fetchCalendarEvents, checkAvailability } from "../api/calendar";
 
 import {
   Send,
-  Bot,
   Sparkles,
   Calendar,
   Clock,
@@ -12,7 +12,7 @@ import {
 interface Message {
   id: string;
   content: string;
-  sender: "user" | "ai";
+  sender: "user" | "assistant";
   timestamp: Date;
 }
 
@@ -28,12 +28,11 @@ export function ChatInterface({
       id: "1",
       content:
         "Hello! I'm Gruve, your AI-powered meeting scheduler. I can help you coordinate meetings across time zones, check availability, and send invitations. What would you like to schedule today?",
-      sender: "ai",
+      sender: "assistant",
       timestamp: new Date(),
     },
   ]);
   const [inputValue, setInputValue] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -45,56 +44,98 @@ export function ChatInterface({
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isTyping]);
+  }, [messages]);
 
-  const handleSend = () => {
-    if (!inputValue.trim()) return;
+    const handleSend = async () => {
+    if (inputValue.trim() === "") return;
 
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      content: inputValue,
-      sender: "user",
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, newMessage]);
-    setInputValue("");
-    setIsTyping(true);
-
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        content: getAIResponse(inputValue),
-        sender: "ai",
+    // Add user message immediately
+    setMessages([
+      ...messages,
+      {
+        id: crypto.randomUUID(),
+        sender: "user",
+        content: inputValue,
         timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, aiResponse]);
-      setIsTyping(false);
-    }, 1500);
+      },
+    ]);
+
+    // Get AI response
+    const aiResponse = await getAIResponse(inputValue);
+
+    // Add AI response
+    setMessages(prevMessages => [
+      ...prevMessages,
+      {
+        id: crypto.randomUUID(),
+        sender: "assistant",
+        content: aiResponse,
+        timestamp: new Date(),
+      },
+    ]);
+
+    // Clear input
+    setInputValue("");
   };
 
-  const getAIResponse = (userInput: string): string => {
+  const getAIResponse = async (userInput: string): Promise<string> => {
     const input = userInput.toLowerCase();
 
-    if (
-      input.includes("schedule") ||
-      input.includes("meeting")
-    ) {
-      return "I'd be happy to help you schedule a meeting! Could you tell me:\n\n• Who needs to attend?\n• What's the preferred duration?\n• Any specific time preferences?\n• Which time zones should I consider?\n\nI'll find the optimal time for everyone!";
+    if (input.includes("check availability") || input.includes("free slots") || input.includes("when am i free")) {
+      try {
+        const availability = await checkAvailability(7, 60); // Check next 7 days, 1-hour slots
+        
+        // Handle error messages from backend
+        if (availability.reason) {
+          if (availability.reason === "OrganizerUnavailable") {
+            return "I checked your calendar but it seems you're fully booked during working hours (9 AM - 5 PM) for the next 7 days. Would you like me to check outside these hours or a different time period?";
+          } else {
+            return `I couldn't find available slots (Reason: ${availability.reason}). Would you like me to try a different time period?`;
+          }
+        }
+
+        if (!availability.suggestions?.length) {
+          return "I checked your calendar for the next 7 days, but I couldn't find any suitable slots. Would you like me to check a different time period?";
+        }
+
+        // Sort suggestions by confidence score if available
+        const suggestions = [...availability.suggestions];
+        if (suggestions[0]?.score !== undefined) {
+          suggestions.sort((a, b) => (b.score || 0) - (a.score || 0));
+        }
+
+        const formattedSlots = suggestions
+          .slice(0, 5) // Show top 5 suggestions
+          .map(slot => {
+            const date = slot.start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            const time = slot.start.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            const score = slot.score ? ` (${Math.round(slot.score * 100)}% optimal)` : '';
+            return `• ${date} at ${time}${score}`;
+          })
+          .join('\n');
+
+        return `I found these available time slots in your calendar:\n\n${formattedSlots}\n\nWould you like me to schedule a meeting in any of these slots?`;
+      } catch (error) {
+        console.error('Failed to check availability:', error);
+        return "I encountered an error while checking your calendar. Please make sure you're signed in and try again.";
+      }
     }
 
-    if (
-      input.includes("availability") ||
-      input.includes("free")
-    ) {
-      return "I can check availability across multiple calendars and time zones. Please share:\n\n• The participants' names or emails\n• Your preferred date range\n• Meeting duration\n\nI'll show you all the available slots that work for everyone.";
+    if (input.includes("schedule") || input.includes("meeting")) {
+      try {
+        const events = await fetchCalendarEvents(1); // Fetch today's events
+        const busyTimes = events.length ? 
+          `\nYou have ${events.length} event${events.length === 1 ? '' : 's'} scheduled for today.` : 
+          "\nYour calendar is clear for today.";
+
+        return `I'd be happy to help you schedule a meeting!${busyTimes}\n\nPlease tell me:\n\n• Who needs to attend?\n• What's the preferred duration?\n• Any specific time preferences?\n\nI'll find the optimal time for everyone!`;
+      } catch (error) {
+        console.error('Failed to fetch calendar events:', error);
+        return "I'd be happy to help you schedule a meeting! Could you tell me:\n\n• Who needs to attend?\n• What's the preferred duration?\n• Any specific time preferences?\n\nI'll find the optimal time for everyone!";
+      }
     }
 
-    if (
-      input.includes("timezone") ||
-      input.includes("time zone")
-    ) {
+    if (input.includes("timezone") || input.includes("time zone")) {
       return "Time zone coordination is one of my specialties! I can:\n\n• Find overlap between multiple time zones\n• Suggest fair rotation schedules\n• Convert meeting times automatically\n• Consider working hours preferences\n\nWhat time zones are you working with?";
     }
 
@@ -176,7 +217,7 @@ export function ChatInterface({
               <div
                 className={`max-w-[80%] ${message.sender === "user" ? "order-last" : ""}`}
               >
-                {message.sender === "ai" && (
+                {message.sender === "assistant" && (
                   <div className="flex items-center space-x-2 mb-2">
                     <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
                       <Sparkles className="w-3 h-3 text-green-600 animate-pulse" />
@@ -209,28 +250,6 @@ export function ChatInterface({
             </div>
           ))}
 
-          {/* Typing Indicator */}
-          {isTyping && (
-            <div className="flex justify-start animate-fadeIn">
-              <div className="max-w-[80%]">
-                <div className="flex items-center space-x-2 mb-2">
-                  <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                    <Sparkles className="w-3 h-3 text-green-600 animate-pulse" />
-                  </div>
-                  <span className="text-xs text-gray-500">
-                    AI Assistant is typing...
-                  </span>
-                </div>
-                <div className="bg-white border border-gray-200 px-6 py-4 rounded-2xl">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.4s]"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
           <div ref={messagesEndRef} />
         </div>
 
