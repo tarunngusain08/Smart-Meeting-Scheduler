@@ -35,6 +35,7 @@ export default function App() {
       setIsAuthenticated(true);
       // Fetch user info from backend
       fetch('http://localhost:8080/graph/me', {
+        credentials: 'include',
         headers: {
           'Authorization': `Bearer ${accessToken}`
         }
