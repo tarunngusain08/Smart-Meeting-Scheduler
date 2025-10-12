@@ -54,5 +54,11 @@ func main() {
 	auth.GET("/me", handlers.GraphMe(cfg))
 	auth.GET("/calendar", handlers.GraphCalendar(cfg))
 
+	// Calendar API endpoints for Microsoft Graph integration
+	api := r.Group("/api")
+	api.Use(middleware.AuthMiddleware(cfg))
+	api.GET("/calendar/events", handlers.CalendarEvents(cfg))
+	api.POST("/calendar/availability", handlers.CalendarAvailability(cfg))
+
 	r.Run(":" + cfg.Port)
 }
