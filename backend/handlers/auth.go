@@ -147,44 +147,46 @@ func Callback(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
-		// Set secure cookies with the tokens
-		c.SetCookie(
-			"access_token",
+		// Create session with refresh token
+		sessionID := utils.CreateSession(
 			token.AccessToken,
+			token.RefreshToken,
 			int(time.Until(token.Expiry).Seconds()),
-			"/",
-			"localhost",
-			false, // Set to true in production with HTTPS
-			true,
 		)
 
+		// Set session cookie that expires in 30 days
 		c.SetCookie(
-			"id_token",
-			rawIDToken,
-			int(time.Until(idToken.Expiry).Seconds()),
+			"session_id",
+			sessionID,
+			30*24*60*60, // 30 days
 			"/",
 			"localhost",
 			false, // Set to true in production with HTTPS
 			true,
 		)
 
-		// Return tokens and user info as JSON
+		// Return success response
 		c.JSON(http.StatusOK, gin.H{
-			"access_token": token.AccessToken,
-			"id_token":     rawIDToken,
-			"expires_in":   int(time.Until(token.Expiry).Seconds()),
 			"user": gin.H{
 				"name":  claims.Name,
 				"email": claims.Email,
 			},
+			"sessionId": sessionID,
 		})
 	}
 }
 
 func Logout(c *gin.Context) {
-	// Clear cookies/session
+	// Clear session if it exists
+	if sessionID, err := c.Cookie("session_id"); err == nil {
+		utils.DeleteSession(sessionID)
+	}
+
+	// Clear all auth-related cookies
+	c.SetCookie("session_id", "", -1, "/", "localhost", false, true)
 	c.SetCookie("oauth_state", "", -1, "/", "localhost", false, true)
 	c.SetCookie("access_token", "", -1, "/", "localhost", false, true)
 	c.SetCookie("id_token", "", -1, "/", "localhost", false, true)
-	c.JSON(http.StatusOK, gin.H{"message": "Logged out"})
+
+	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
