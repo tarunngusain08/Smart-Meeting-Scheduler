@@ -3,6 +3,7 @@ package handlers
 import (
 	"Smart-Meeting-Scheduler/config"
 	"Smart-Meeting-Scheduler/models"
+	"Smart-Meeting-Scheduler/utils"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -19,7 +20,6 @@ const (
 	graphAPIBase = "https://graph.microsoft.com/v1.0"
 )
 
-// GET /api/calendar/events?days=7&start=2025-10-11
 func CalendarEvents(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get access token from context (set by AuthMiddleware)
@@ -153,8 +153,29 @@ func CalendarAvailability(cfg *config.Config) gin.HandlerFunc {
 		// Get access token from context (set by AuthMiddleware)
 		accessToken := c.GetString("access_token")
 		if accessToken == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "No access token found"})
-			return
+			log.Printf("No access token found in context")
+
+			// Try getting from session
+			if sessionID, err := c.Cookie("session_id"); err == nil {
+				if session, exists := utils.GetSession(sessionID); exists {
+					accessToken = session.AccessToken
+					log.Printf("Retrieved access token from session, length: %d", len(accessToken))
+					log.Println("Access Token:", accessToken)
+				} else {
+					log.Printf("Session found but invalid: %s", sessionID)
+				}
+			} else {
+				log.Printf("No session cookie found: %v", err)
+			}
+
+			if accessToken == "" {
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"error":  "No access token found",
+					"status": "error",
+					"reason": "Unauthorized",
+				})
+				return
+			}
 		}
 
 		// Fetch current user details
@@ -219,32 +240,42 @@ func CalendarAvailability(cfg *config.Config) gin.HandlerFunc {
 		log.Printf("Original time range: %v to %v", startTime.Format(time.RFC3339), endTime.Format(time.RFC3339))
 		log.Printf("IST time range: %v to %v", startTimeIST.Format(time.RFC3339), endTimeIST.Format(time.RFC3339))
 
-		// Adjust to working hours (9 AM - 5 PM IST)
-		// For multi-day ranges, use first day
-		workingStart := time.Date(startTimeIST.Year(), startTimeIST.Month(), startTimeIST.Day(), 9, 0, 0, 0, ist)
-		if startTimeIST.Hour() >= 9 && startTimeIST.Hour() < 17 {
-			workingStart = startTimeIST
+		// Use broader working hours: 7 AM to 10 PM IST
+		workingStart := startTimeIST
+		workingEnd := endTimeIST
+
+		// Adjust start time to 7 AM IST if before
+		if startTimeIST.Hour() < 7 {
+			workingStart = time.Date(startTimeIST.Year(), startTimeIST.Month(), startTimeIST.Day(), 7, 0, 0, 0, ist)
 		}
 
-		// For end time, if it's more than 1 day ahead, use end of first day
-		workingEnd := workingStart
-		if endTimeIST.Sub(startTimeIST) <= 24*time.Hour {
-			workingEnd = time.Date(endTimeIST.Year(), endTimeIST.Month(), endTimeIST.Day(), 17, 0, 0, 0, ist)
-			if endTimeIST.Hour() > 9 && endTimeIST.Hour() <= 17 {
-				workingEnd = endTimeIST
-			}
-		} else {
-			workingEnd = time.Date(workingStart.Year(), workingStart.Month(), workingStart.Day(), 17, 0, 0, 0, ist)
+		// Adjust end time to 10 PM IST if after
+		if endTimeIST.Hour() >= 22 {
+			workingEnd = time.Date(endTimeIST.Year(), endTimeIST.Month(), endTimeIST.Day(), 22, 0, 0, 0, ist)
 		}
 
-		log.Printf("Adjusted to working hours (%d:00-%d:00 IST): %s to %s",
-			9, 17,
+		// For multi-day ranges, apply working hours to each day
+		if endTimeIST.Sub(startTimeIST) > 24*time.Hour {
+			// Keep original end date but set to 10 PM
+			workingEnd = time.Date(endTimeIST.Year(), endTimeIST.Month(), endTimeIST.Day(), 22, 0, 0, 0, ist)
+		}
+
+		log.Printf("Adjusted to working hours (7:00-22:00 IST): %s to %s",
 			workingStart.Format("2006-01-02 15:04 MST"),
 			workingEnd.Format("2006-01-02 15:04 MST"))
 
+		// Always include the current user (prompter) in schedules
+		attendeeEmails := []string{req.Organizer.Email}
+		// Add other attendees if present
+		for _, att := range req.Attendees {
+			if att.Email != req.Organizer.Email {
+				attendeeEmails = append(attendeeEmails, att.Email)
+			}
+		}
+
 		// First try to get availability using the schedules API
 		scheduleRequest := map[string]interface{}{
-			"schedules": []string{req.Organizer.Email},
+			"schedules": attendeeEmails,
 			"startTime": map[string]interface{}{
 				"dateTime": workingStart.UTC().Format("2006-01-02T15:04:05"),
 				"timeZone": "UTC",
@@ -253,7 +284,7 @@ func CalendarAvailability(cfg *config.Config) gin.HandlerFunc {
 				"dateTime": workingEnd.UTC().Format("2006-01-02T15:04:05"),
 				"timeZone": "UTC",
 			},
-			"availabilityViewInterval": req.Duration,
+			"availabilityViewInterval": 30, // Fixed 30-minute intervals for better granularity
 		}
 
 		log.Printf("Checking availability with working hours: %v to %v IST",
@@ -263,7 +294,10 @@ func CalendarAvailability(cfg *config.Config) gin.HandlerFunc {
 		// Create request to Microsoft Graph for schedules
 		scheduleUrl := fmt.Sprintf("%s/users/%s/calendar/getSchedule", graphAPIBase, req.Organizer.Email)
 		schedulesJson, _ := json.Marshal(scheduleRequest)
-		fmt.Printf("Sending schedules request to Microsoft Graph: %s\n", string(schedulesJson))
+		fmt.Printf("Sending schedules request to Microsoft Graph:\nURL: %s\nPayload: %s\nAccess Token: %s\n",
+			scheduleUrl,
+			string(schedulesJson),
+			accessToken)
 
 		client := &http.Client{}
 		scheduleReq, _ := http.NewRequest("POST", scheduleUrl, bytes.NewBuffer(schedulesJson))
@@ -274,30 +308,50 @@ func CalendarAvailability(cfg *config.Config) gin.HandlerFunc {
 		scheduleResp, err := client.Do(scheduleReq)
 		if err == nil && scheduleResp.StatusCode == http.StatusOK {
 			var scheduleResult map[string]interface{}
-			body, _ := io.ReadAll(scheduleResp.Body)
+			scheduleBody, _ := io.ReadAll(scheduleResp.Body)
 			scheduleResp.Body.Close()
-			fmt.Printf("Schedule API response: %s\n", string(body))
+			fmt.Printf("Schedule API response: %s\n", string(scheduleBody))
 
 			// Create new reader from body
-			if err := json.NewDecoder(bytes.NewReader(body)).Decode(&scheduleResult); err == nil {
+			if err := json.NewDecoder(bytes.NewReader(scheduleBody)).Decode(&scheduleResult); err == nil {
 				if schedules, ok := scheduleResult["value"].([]interface{}); ok && len(schedules) > 0 {
 					if schedule, ok := schedules[0].(map[string]interface{}); ok {
 						if view, ok := schedule["availabilityView"].(string); ok {
-							// Process the availability view
+							// Process the availability view with better logging
 							var slots []models.TimeSlot
-							interval := 60 // 60-minute intervals
-							currentTime := startTime
+							interval := req.Duration // Use requested duration
+							currentTime := workingStart
 
+							fmt.Printf("Processing availability view: %s\n", view)
+							fmt.Printf("Interval: %d minutes\n", interval)
+
+							// We get availability in 30-minute blocks
 							for i := 0; i < len(view); i++ {
-								if view[i] == '0' { // Free slot
-									slotStart := currentTime.Add(time.Duration(i*interval) * time.Minute)
-									slotEnd := slotStart.Add(time.Duration(req.Duration) * time.Minute)
+								slotStart := currentTime.Add(time.Duration(i*30) * time.Minute)
+								slotStartIST := slotStart.In(ist)
 
-									slots = append(slots, models.TimeSlot{
-										Start: slotStart,
-										End:   slotEnd,
-										Score: 1.0,
-									})
+								// Check if slot is within working hours (7 AM - 10 PM IST)
+								if slotStartIST.Hour() >= 7 && slotStartIST.Hour() < 22 {
+									// Check if we have enough consecutive free blocks for the requested duration
+									blocksNeeded := (req.Duration + 29) / 30 // Round up
+									isAvailable := true
+
+									// Check consecutive blocks
+									for j := 0; j < blocksNeeded && i+j < len(view); j++ {
+										if view[i+j] != '0' {
+											isAvailable = false
+											break
+										}
+									}
+
+									if isAvailable {
+										slotEnd := slotStart.Add(time.Duration(req.Duration) * time.Minute)
+										slots = append(slots, models.TimeSlot{
+											Start: slotStart,
+											End:   slotEnd,
+											Score: 1.0,
+										})
+									}
 								}
 							}
 
@@ -315,8 +369,32 @@ func CalendarAvailability(cfg *config.Config) gin.HandlerFunc {
 		}
 
 		// If schedules API didn't work, fall back to findMeetingTimes
+		// Prepare attendees list, always including the organizer
+		attendeesList := []map[string]interface{}{
+			{
+				"emailAddress": map[string]string{
+					"address": req.Organizer.Email,
+					"name":    req.Organizer.Name,
+				},
+				"type": "Required",
+			},
+		}
+
+		// Add other attendees if present
+		for _, att := range req.Attendees {
+			if att.Email != req.Organizer.Email {
+				attendeesList = append(attendeesList, map[string]interface{}{
+					"emailAddress": map[string]string{
+						"address": att.Email,
+						"name":    att.Name,
+					},
+					"type": "Required",
+				})
+			}
+		}
+
 		findMeetingRequest := map[string]interface{}{
-			"attendees":                 attendees,
+			"attendees":                 attendeesList,
 			"minimumAttendeePercentage": 100,
 			"meetingDuration":           fmt.Sprintf("PT%dM", req.Duration),
 			"maxCandidates":             50,
@@ -379,7 +457,8 @@ func CalendarAvailability(cfg *config.Config) gin.HandlerFunc {
 		defer resp.Body.Close()
 
 		// Read response body
-		body, err := io.ReadAll(resp.Body)
+		var body []byte
+		body, err = io.ReadAll(resp.Body)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read response"})
 			return
@@ -417,12 +496,24 @@ func CalendarAvailability(cfg *config.Config) gin.HandlerFunc {
 					slotStart := currentTime.Add(time.Duration(i*interval) * time.Minute)
 					slotEnd := slotStart.Add(time.Duration(req.Duration) * time.Minute)
 
-					// Check if slot fits within working hours (9 AM - 5 PM)
-					if slotStart.Hour() >= 9 && slotEnd.Hour() <= 17 {
+					// Check if slot fits within extended working hours (7 AM - 10 PM)
+					slotStartIST := slotStart.In(ist)
+					slotEndIST := slotEnd.In(ist)
+					if slotStartIST.Hour() >= 7 && slotEndIST.Hour() < 22 {
+						// Calculate score based on time of day (higher scores for traditional working hours)
+						score := 1.0
+						if slotStartIST.Hour() >= 9 && slotEndIST.Hour() <= 17 {
+							score = 1.0 // Perfect score for traditional working hours
+						} else if slotStartIST.Hour() >= 7 && slotStartIST.Hour() < 9 {
+							score = 0.8 // Early morning slots
+						} else {
+							score = 0.7 // Evening slots
+						}
+
 						response.Suggestions = append(response.Suggestions, models.TimeSlot{
 							Start: slotStart,
 							End:   slotEnd,
-							Score: 1.0,
+							Score: score,
 						})
 					}
 				}
@@ -441,7 +532,7 @@ func CalendarAvailability(cfg *config.Config) gin.HandlerFunc {
 			switch reason {
 			case "OrganizerUnavailable":
 				message = fmt.Sprintf("No available time slots found within working hours (%d:00-%d:00 IST). Current range: %s to %s",
-					9, 17,
+					7, 22,
 					workingStart.Format("2006-01-02 15:04 MST"),
 					workingEnd.Format("2006-01-02 15:04 MST"))
 			case "AttendeeUnavailable":
