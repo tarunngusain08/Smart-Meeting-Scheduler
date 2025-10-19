@@ -117,7 +117,7 @@ func Callback(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 		log.Printf("Token exchange successful. Access token length: %d", len(token.AccessToken))
-
+		log.Println("Access Token:", token.AccessToken)
 		rawIDToken, ok := token.Extra("id_token").(string)
 		if !ok {
 			log.Printf("No id_token found in token response")
@@ -159,6 +159,17 @@ func Callback(cfg *config.Config) gin.HandlerFunc {
 			"session_id",
 			sessionID,
 			30*24*60*60, // 30 days
+			"/",
+			"localhost",
+			false, // Set to true in production with HTTPS
+			true,
+		)
+
+		// Set access token cookie
+		c.SetCookie(
+			"access_token",
+			token.AccessToken,
+			int(time.Until(token.Expiry).Seconds()),
 			"/",
 			"localhost",
 			false, // Set to true in production with HTTPS
