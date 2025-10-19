@@ -3,6 +3,7 @@ package middleware
 import (
 	"Smart-Meeting-Scheduler/config"
 	"Smart-Meeting-Scheduler/utils"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -12,39 +13,31 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Check for session cookie first
 		sessionID, err := c.Cookie("session_id")
-		if err == nil {
-			// If we have a session, try to get it
-			if session, exists := utils.GetSession(sessionID); exists {
-				// Add access token to context
-				c.Set("access_token", session.AccessToken)
-				c.Next()
-				return
-			}
-		}
-
-		// If no valid session, check Authorization header
-		authHeader := c.GetHeader("Authorization")
-		if authHeader != "" {
-			// Remove "Bearer " prefix if present
-			token := authHeader
-			if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
-				token = authHeader[7:]
-			}
-			// Set token in context for handlers to use
-			c.Set("access_token", token)
-			c.Next()
+		if err != nil {
+			fmt.Printf("No session cookie found: %v\n", err)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "Authentication required",
+				"code":  "NO_SESSION"})
 			return
 		}
 
-		// If no Authorization header, check access_token cookie
-		token, err := c.Cookie("access_token")
-		if err != nil || token == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "No valid session or token found"})
+		fmt.Printf("Found session ID: %s\n", sessionID)
+		session, exists := utils.GetSession(sessionID)
+
+		if !exists {
+			fmt.Printf("No valid session found for ID: %s - session may have expired\n", sessionID)
+			// Clear the invalid session cookie
+			c.SetCookie("session_id", "", -1, "/", "", true, true)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "Session expired",
+				"code":  "SESSION_EXPIRED"})
 			return
 		}
 
-		// Set token in context for handlers to use
-		c.Set("access_token", token)
+		fmt.Printf("Session found with access token length: %d\n", len(session.AccessToken))
+		// Set session context and access token
+		c.Set("session_id", sessionID)
+		c.Set("access_token", session.AccessToken)
 		c.Next()
 	}
 }
