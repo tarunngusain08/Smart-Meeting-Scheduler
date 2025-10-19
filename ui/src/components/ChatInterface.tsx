@@ -8,6 +8,7 @@ import {
   Clock,
   LogOut,
 } from "lucide-react";
+import { ParticipantSelector } from "./ui/participant-selector";
 
 interface Message {
   id: string;
@@ -32,6 +33,7 @@ export function ChatInterface({
       timestamp: new Date(),
     },
   ]);
+  const [participants, setParticipants] = useState<{ email: string; name?: string }[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -78,14 +80,18 @@ export function ChatInterface({
     setInputValue("");
   };
 
-  const getAIResponse = async (userInput: string): Promise<string> => {
+    const getAIResponse = async (userInput: string): Promise<string> => {
     const input = userInput.toLowerCase();
 
     if (input.includes("check availability") || input.includes("free slots") || input.includes("when am i free")) {
       try {
-        const availability = await checkAvailability(7, 60); // Check next 7 days, 1-hour slots
-        
-        // Handle error messages from backend
+        console.log('Checking availability with participants:', participants);
+        const startTime = new Date();
+        const endTime = new Date(startTime);
+        endTime.setDate(endTime.getDate() + 7); // Next 7 days
+
+        const availability = await checkAvailability(7, 60, participants); // Check next 7 days, 1-hour slots with participants
+        console.log('Availability response:', availability);        // Handle error messages from backend
         if (availability.reason) {
           if (availability.reason === "OrganizerUnavailable") {
             return "I checked your calendar but it seems you're fully booked during working hours (9 AM - 5 PM) for the next 7 days. Would you like me to check outside these hours or a different time period?";
@@ -253,7 +259,7 @@ export function ChatInterface({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Quick Reply Buttons */}
+        {/* Quick Reply Buttons and Participant Selector */}
         <div className="flex flex-wrap gap-2 mb-4">
           <button
             onClick={() =>
@@ -273,6 +279,7 @@ export function ChatInterface({
             <Clock className="w-4 h-4" />
             <span>Check Availability</span>
           </button>
+          <ParticipantSelector onParticipantsChange={setParticipants} />
         </div>
 
         {/* Input Area */}
