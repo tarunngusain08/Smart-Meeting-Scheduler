@@ -65,6 +65,9 @@ export function LandingPage() {
           <div className="mb-8">
             <button
               onClick={() => {
+                // Clear any existing session
+                localStorage.clear();
+                
                 // Use the exact redirect URI that's configured in Azure portal
                 const redirectUri = 'http://localhost:8080/auth/callback'; // This must match Azure exactly
                 window.location.href = `http://localhost:8080/auth/login?redirect_uri=${encodeURIComponent(redirectUri)}`;
