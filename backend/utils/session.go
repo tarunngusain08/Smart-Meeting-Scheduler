@@ -74,8 +74,8 @@ func DeleteSession(sessionID string) {
 
 func refreshSession(session models.Session) (models.Session, error) {
 	data := url.Values{}
-	data.Set("client_id", os.Getenv("AZURE_CLIENT_ID"))
-	data.Set("client_secret", os.Getenv("AZURE_CLIENT_SECRET"))
+	data.Set("client_id", os.Getenv("CLIENT_ID"))
+	data.Set("client_secret", os.Getenv("CLIENT_SECRET"))
 	data.Set("refresh_token", session.RefreshToken)
 	data.Set("grant_type", "refresh_token")
 	data.Set("scope", "openid profile email offline_access User.Read Calendars.Read")
