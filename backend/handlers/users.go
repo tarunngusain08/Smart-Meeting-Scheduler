@@ -1,0 +1,108 @@
+package handlers
+
+import (
+	"Smart-Meeting-Scheduler/config"
+	"Smart-Meeting-Scheduler/models"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
+// userStore is our database connection for user operations
+var userStore *models.UserStore
+
+// initUserStore initializes the user store with a database connection
+func initUserStore(cfg *config.Config) error {
+	if userStore != nil {
+		return nil
+	}
+
+	dbCfg := config.NewDBConfig()
+	db, err := dbCfg.ConnectDB()
+	if err != nil {
+		return fmt.Errorf("failed to connect to database: %v", err)
+	}
+
+	userStore = models.NewUserStore(db)
+	return nil
+}
+
+// SyncUsers syncs users from Microsoft Graph to local database
+func SyncUsers(cfg *config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := initUserStore(cfg); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initialize database"})
+			return
+		}
+
+		accessToken := c.GetString("access_token")
+		if accessToken == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "No access token found"})
+			return
+		}
+
+		// Fetch users from Microsoft Graph
+		url := fmt.Sprintf("%s/users?$select=id,displayName,mail,userPrincipalName&$top=999", cfg.GraphAPIBase)
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
+			return
+		}
+
+		req.Header.Add("Authorization", "Bearer "+accessToken)
+		req.Header.Add("Accept", "application/json")
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
+			return
+		}
+		defer resp.Body.Close()
+
+		var result struct {
+			Value []models.MSUser `json:"value"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse response"})
+			return
+		}
+
+		// Update local database
+		if err := userStore.UpsertUsers(result.Value); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update local database"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Users synced successfully", "count": len(result.Value)})
+	}
+}
+
+// SearchUsers handles user search requests using the local database
+func SearchUsers(cfg *config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := initUserStore(cfg); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initialize database"})
+			return
+		}
+
+		query := c.Query("q")
+		if query == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Search query is required"})
+			return
+		}
+
+		// Search in local database
+		users, err := userStore.SearchUsers(query)
+		if err != nil {
+			log.Printf("Failed to search users: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search users"})
+			return
+		}
+
+		c.JSON(http.StatusOK, users)
+	}
+}
