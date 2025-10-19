@@ -31,13 +31,24 @@ export function AuthCallback() {
         }
 
         const authData = await response.json();
+        console.log('Auth response:', authData);
         
-        // Store the tokens
-        localStorage.setItem('access_token', authData.access_token);
-        localStorage.setItem('id_token', authData.id_token);
+        // Store the session and user data
         if (authData.user) {
           localStorage.setItem('user', JSON.stringify(authData.user));
         }
+        if (authData.sessionId) {
+          localStorage.setItem('session_id', authData.sessionId);
+          console.log('Session ID stored:', authData.sessionId);
+        }
+
+        // Add a small delay to ensure storage is complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Navigate to chat interface
+        console.log('Redirecting to chat interface...');
+        navigate('/chat');
+        return;
 
         // Navigate to the chat interface
         navigate('/chat', { replace: true });
