@@ -4,7 +4,6 @@ import (
 	"Smart-Meeting-Scheduler/config"
 	"Smart-Meeting-Scheduler/handlers"
 	"Smart-Meeting-Scheduler/middleware"
-	"log"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -55,12 +54,6 @@ func main() {
 	auth.GET("/me", handlers.GraphMe(cfg))
 	auth.GET("/calendar", handlers.GraphCalendar(cfg))
 	auth.GET("/users/search", handlers.SearchUsers(cfg))
-	auth.POST("/users/sync", handlers.TriggerManualSync(cfg))
-
-	// Initialize user sync
-	if err := handlers.InitUserSync(cfg); err != nil {
-		log.Printf("Warning: Failed to initialize user sync: %v", err)
-	}
 
 	// Calendar API endpoints for Microsoft Graph integration
 	api := r.Group("/api")
@@ -68,6 +61,7 @@ func main() {
 	api.GET("/calendar/events", handlers.CalendarEvents(cfg))
 	api.POST("/calendar/availability", handlers.CalendarAvailability(cfg))
 	api.POST("/calendar/meetings", handlers.CreateMeeting(cfg))
+	api.POST("/calendar/findTimes", handlers.FindMeetingTimes(cfg))
 
 	r.Run(":" + cfg.Port)
 }
