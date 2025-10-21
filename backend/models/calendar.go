@@ -2,94 +2,160 @@ package models
 
 import "time"
 
-type CalendarEvent struct {
-	ID             string    `json:"id"`
-	Subject        string    `json:"subject"`
-	Start          time.Time `json:"start"`
-	End            time.Time `json:"end"`
-	Location       string    `json:"location,omitempty"`
-	IsOnline       bool      `json:"isOnline"`
-	JoinURL        string    `json:"joinUrl,omitempty"`
-	Organizer      *User     `json:"organizer"`
-	Attendees      []User    `json:"attendees"`
-	IsCancelled    bool      `json:"isCancelled"`
-	ResponseStatus string    `json:"responseStatus"`
-}
-
-type User struct {
-	Email string `json:"email"`
-	Name  string `json:"name,omitempty"`
-}
-
-type GraphUser struct {
-	ID                string `json:"id"`
-	DisplayName       string `json:"displayName"`
-	Mail              string `json:"mail"`
-	UserPrincipalName string `json:"userPrincipalName"`
-}
-
+// AvailabilityRequest represents the request for checking calendar availability
 type AvailabilityRequest struct {
-	Attendees []User    `json:"attendees"`
-	StartTime time.Time `json:"startTime"`
-	EndTime   time.Time `json:"endTime"`
-	Duration  int       `json:"duration"`            // in minutes
-	Organizer *User     `json:"organizer,omitempty"` // The meeting organizer
+	Schedules []string `json:"schedules"`
+	StartTime string   `json:"startTime"`
+	EndTime   string   `json:"endTime"`
+	TimeZone  string   `json:"timeZone"`
 }
 
-type TimeSlot struct {
-	Start time.Time `json:"start"`
-	End   time.Time `json:"end"`
-	Score float64   `json:"score,omitempty"`
-}
-
-// Common availability error reasons from Microsoft Graph API
-const (
-	ErrOrganizerUnavailable     = "OrganizerUnavailable"
-	ErrAttendeeUnavailable      = "AttendeeUnavailable"
-	ErrLocationUnavailable      = "LocationUnavailable"
-	ErrUnknownAvailabilityError = "Unknown"
-)
-
+// AvailabilityResponse represents the response from MS Graph API for availability
 type AvailabilityResponse struct {
-	Suggestions []TimeSlot `json:"suggestions"`
-	Reason      string     `json:"reason,omitempty"`  // Reason if no suggestions available
-	Status      string     `json:"status"`            // "success" or "error"
-	Message     string     `json:"message,omitempty"` // Human-readable message
+	Value []ScheduleResponse `json:"value"`
 }
 
-type GraphEventResponse struct {
-	Value []struct {
-		ID      string `json:"id"`
-		Subject string `json:"subject"`
-		Start   struct {
-			DateTime string `json:"dateTime"`
-			TimeZone string `json:"timeZone"`
-		} `json:"start"`
-		End struct {
-			DateTime string `json:"dateTime"`
-			TimeZone string `json:"timeZone"`
-		} `json:"end"`
-		Location struct {
-			DisplayName string `json:"displayName"`
-		} `json:"location"`
-		OnlineMeeting struct {
-			JoinURL string `json:"joinUrl"`
-		} `json:"onlineMeeting"`
-		Organizer struct {
-			EmailAddress struct {
-				Address string `json:"address"`
-				Name    string `json:"name"`
-			} `json:"emailAddress"`
-		} `json:"organizer"`
-		Attendees []struct {
-			EmailAddress struct {
-				Address string `json:"address"`
-				Name    string `json:"name"`
-			} `json:"emailAddress"`
-			Status struct {
-				Response string `json:"response"`
-			} `json:"status"`
-		} `json:"attendees"`
-		IsCancelled bool `json:"isCancelled"`
-	} `json:"value"`
+// ScheduleResponse represents availability information for a single user
+type ScheduleResponse struct {
+	ScheduleID         string           `json:"scheduleId"`
+	AvailabilityView  string           `json:"availabilityView"`
+	ScheduleItems     []ScheduleItem    `json:"scheduleItems"`
+	WorkingHours      WorkingHours     `json:"workingHours"`
+	Error             *ScheduleError    `json:"error,omitempty"`
+}
+
+// ScheduleItem represents a single calendar item in the schedule
+type ScheduleItem struct {
+	Status    string    `json:"status"`
+	Start     TimeSlot  `json:"start"`
+	End       TimeSlot  `json:"end"`
+	ItemType  string    `json:"type"`
+}
+
+// TimeSlot represents a time with timezone information
+type TimeSlot struct {
+	DateTime string `json:"dateTime"`
+	TimeZone string `json:"timeZone"`
+}
+
+// WorkingHours represents a user's working hours configuration
+type WorkingHours struct {
+	DaysOfWeek []string  `json:"daysOfWeek"`
+	StartTime  string    `json:"startTime"`
+	EndTime    string    `json:"endTime"`
+	TimeZone   TimeZone  `json:"timeZone"`
+}
+
+// TimeZone represents timezone information
+type TimeZone struct {
+	Name string `json:"name"`
+}
+
+// ScheduleError represents an error response for a specific schedule
+type ScheduleError struct {
+	Message string `json:"message"`
+	Code    string `json:"code"`
+}
+
+// MeetingRequest represents the request to create a new meeting
+type MeetingRequest struct {
+	Subject     string     `json:"subject"`
+	Body        string     `json:"body"`
+	StartTime   string     `json:"startTime"`
+	EndTime     string     `json:"endTime"`
+	Attendees   []Attendee `json:"attendees"`
+	Location    *string    `json:"location,omitempty"`
+	TimeZone    string     `json:"timeZone,omitempty"`
+	IsRecurring bool       `json:"isRecurring,omitempty"`
+}
+
+// Attendee represents a meeting attendee
+type Attendee struct {
+	Email string `json:"email"`
+	Name  string `json:"name"`
+	Type  string `json:"type,omitempty"` // required/optional
+}
+
+// MeetingResponse represents the response from MS Graph API for meeting creation
+type MeetingResponse struct {
+	ID                 string    `json:"id"`
+	CreatedDateTime    time.Time `json:"createdDateTime"`
+	LastModifiedDateTime time.Time `json:"lastModifiedDateTime"`
+	Subject            string    `json:"subject"`
+	OnlineMeeting     *OnlineMeetingInfo `json:"onlineMeeting,omitempty"`
+	WebLink           string    `json:"webLink"`
+}
+
+// OnlineMeetingInfo represents Teams meeting information
+type OnlineMeetingInfo struct {
+	JoinURL    string `json:"joinUrl"`
+	Provider   string `json:"provider"`
+	QuickDial  string `json:"quickDial,omitempty"`
+	TollNumber string `json:"tollNumber,omitempty"`
+}
+
+// CalendarEventsResponse represents the response for calendar events
+type CalendarEventsResponse struct {
+	Value    []Event `json:"value"`
+	NextLink string  `json:"@odata.nextLink,omitempty"`
+}
+
+// Event represents a calendar event
+type Event struct {
+	ID                string            `json:"id"`
+	Subject           string            `json:"subject"`
+	Body              EventBody         `json:"body"`
+	Start             TimeSlot          `json:"start"`
+	End               TimeSlot          `json:"end"`
+	Location          Location          `json:"location,omitempty"`
+	Attendees         []EventAttendee   `json:"attendees"`
+	Organizer         Organizer         `json:"organizer"`
+	IsOnlineMeeting   bool              `json:"isOnlineMeeting"`
+	OnlineMeeting     *OnlineMeetingInfo `json:"onlineMeeting,omitempty"`
+	IsCancelled       bool              `json:"isCancelled"`
+}
+
+// EventBody represents the body content of an event
+type EventBody struct {
+	ContentType string `json:"contentType"`
+	Content     string `json:"content"`
+}
+
+// Location represents the location of an event
+type Location struct {
+	DisplayName string `json:"displayName"`
+	Address     *Address `json:"address,omitempty"`
+}
+
+// Address represents a physical address
+type Address struct {
+	Street     string `json:"street"`
+	City       string `json:"city"`
+	State      string `json:"state"`
+	PostalCode string `json:"postalCode"`
+	Country    string `json:"country"`
+}
+
+// EventAttendee represents an attendee of an event with response status
+type EventAttendee struct {
+	EmailAddress EmailAddress     `json:"emailAddress"`
+	Status       ResponseStatus   `json:"status"`
+	Type         string          `json:"type"` // required/optional
+}
+
+// EmailAddress represents an email address with display name
+type EmailAddress struct {
+	Name    string `json:"name"`
+	Address string `json:"address"`
+}
+
+// ResponseStatus represents an attendee's response to the event
+type ResponseStatus struct {
+	Response string    `json:"response"` // none/accepted/tentative/declined
+	Time     time.Time `json:"time"`
+}
+
+// Organizer represents the event organizer
+type Organizer struct {
+	EmailAddress EmailAddress `json:"emailAddress"`
 }
