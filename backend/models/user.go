@@ -7,17 +7,18 @@ import (
 )
 
 type User struct {
-	ID                string          `json:"id" db:"id"`
-	DisplayName       string          `json:"displayName" db:"display_name"`
-	Email             string          `json:"mail,omitempty" db:"email"`
-	UserPrincipalName string          `json:"userPrincipalName,omitempty" db:"user_principal_name"`
+	ID                string `json:"id" db:"id"`
+	DisplayName       string `json:"displayName" db:"display_name"`
+	Email             string `json:"mail,omitempty" db:"email"`
+	UserPrincipalName string `json:"userPrincipalName,omitempty" db:"user_principal_name"`
 }
 
 type MSUser struct {
 	User
-	LastSynced        time.Time       `json:"lastSynced" db:"last_synced"`
-	IsRemoved         bool           `json:"-"`                        // Indicates if user was removed
-	RawJSON           json.RawMessage `json:"-" db:"-"`                // Store raw JSON for future fields
+	LastSynced time.Time       `json:"lastSynced" db:"last_synced"`
+	IsRemoved  bool            `json:"-"`        // Indicates if user was removed
+	RawJSON    json.RawMessage `json:"-" db:"-"` // Store raw JSON for future fields
+}
 
 // UnmarshalJSON implements custom JSON unmarshaling to handle @removed field
 func (u *MSUser) UnmarshalJSON(data []byte) error {
