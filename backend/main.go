@@ -55,13 +55,14 @@ func main() {
 	auth.GET("/calendar", handlers.GraphCalendar(cfg))
 	auth.GET("/users/search", handlers.SearchUsers(cfg))
 
+	calendar := r.Group("/calendar")
+	calendar.Use(middleware.AuthMiddleware(cfg))
+	calendar.POST("/availability", handlers.CheckAvailability(cfg))
+	calendar.POST("/schedule-meeting", handlers.ScheduleMeeting(cfg))
+
 	// Calendar API endpoints for Microsoft Graph integration
 	api := r.Group("/api")
 	api.Use(middleware.AuthMiddleware(cfg))
-	api.GET("/calendar/events", handlers.CalendarEvents(cfg))
-	api.POST("/calendar/availability", handlers.CalendarAvailability(cfg))
-	api.POST("/calendar/meetings", handlers.CreateMeeting(cfg))
-	api.POST("/calendar/findTimes", handlers.FindMeetingTimes(cfg))
 
 	r.Run(":" + cfg.Port)
 }
