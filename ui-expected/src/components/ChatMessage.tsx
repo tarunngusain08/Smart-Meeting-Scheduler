@@ -20,19 +20,19 @@ export function ChatMessage({ message, isTyping }: ChatMessageProps) {
   return (
     <div className={`flex gap-3 ${isAI ? 'justify-start' : 'justify-end'}`}>
       {isAI && (
-        <Avatar className="h-8 w-8 mt-1 ring-2 ring-emerald-500/20">
-          <AvatarFallback className="bg-gradient-to-br from-emerald-400 to-teal-500">
-            <Bot className="h-4 w-4 text-white" />
+        <Avatar className="h-10 w-10 mt-1 ring-2 ring-[#5B9A68]/30">
+          <AvatarFallback className="bg-gradient-to-br from-[#5B9A68] to-emerald-600">
+            <Bot className="h-5 w-5 text-white" />
           </AvatarFallback>
         </Avatar>
       )}
 
       <div className={`flex flex-col max-w-[80%] ${!isAI && 'items-end'}`}>
         <div
-          className={`rounded-2xl px-4 py-3 shadow-sm ${
+          className={`rounded-2xl px-5 py-3.5 shadow-md ${
             isAI
-              ? 'bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-slate-800 dark:to-slate-800/50 border border-slate-200/50 dark:border-slate-700/50'
-              : 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-emerald-500/20'
+              ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white border border-gray-200 dark:border-slate-600'
+              : 'bg-gradient-to-br from-[#5B9A68] to-emerald-600 text-white shadow-lg'
           }`}
         >
           {isTyping ? (
@@ -51,21 +51,21 @@ export function ChatMessage({ message, isTyping }: ChatMessageProps) {
               ))}
             </div>
           ) : (
-            <p className={`whitespace-pre-line ${isAI ? 'text-slate-700 dark:text-slate-200' : 'text-white'}`}>
+            <p className={`whitespace-pre-line text-base ${isAI ? 'text-gray-900 dark:text-white' : 'text-white'}`}>
               {message.content}
             </p>
           )}
         </div>
 
-        <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 px-1">
+        <span className="text-xs text-gray-600 dark:text-gray-400 mt-1 px-1">
           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
       </div>
 
       {!isAI && (
-        <Avatar className="h-8 w-8 mt-1 ring-2 ring-emerald-500/20">
-          <AvatarFallback className="bg-gradient-to-br from-blue-400 to-indigo-500">
-            <User className="h-4 w-4 text-white" />
+        <Avatar className="h-10 w-10 mt-1 ring-2 ring-blue-500/30">
+          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600">
+            <User className="h-5 w-5 text-white" />
           </AvatarFallback>
         </Avatar>
       )}
