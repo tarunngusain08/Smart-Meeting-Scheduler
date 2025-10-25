@@ -20,9 +20,9 @@ export function ChatMessage({ message, isTyping }: ChatMessageProps) {
   return (
     <div className={`flex gap-3 ${isAI ? 'justify-start' : 'justify-end'}`}>
       {isAI && (
-        <Avatar className="h-10 w-10 mt-1 ring-2 ring-[#4A8456]/40">
-          <AvatarFallback className="bg-[#4A8456]">
-            <Bot className="h-5 w-5 text-white stroke-[2.5]" />
+        <Avatar className="h-10 w-10 mt-1 ring-2 ring-emerald-500 shadow-lg">
+          <AvatarFallback className="bg-[#10B981]">
+            <Bot className="h-6 w-6 text-white stroke-[3]" />
           </AvatarFallback>
         </Avatar>
       )}
@@ -31,8 +31,8 @@ export function ChatMessage({ message, isTyping }: ChatMessageProps) {
         <div
           className={`rounded-2xl px-6 py-4 shadow-md ${
             isAI
-              ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white border-2 border-gray-300/50 dark:border-slate-600'
-              : 'bg-gradient-to-br from-[#4A8456] to-[#3D7047] text-white shadow-lg border-2 border-[#3D7047]/50'
+              ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white border-2 border-emerald-200 dark:border-slate-600'
+              : 'bg-gradient-to-br from-[#10B981] to-[#059669] text-white shadow-lg border-2 border-emerald-600'
           }`}
         >
           {isTyping ? (
@@ -51,7 +51,7 @@ export function ChatMessage({ message, isTyping }: ChatMessageProps) {
               ))}
             </div>
           ) : (
-            <p className={`whitespace-pre-line text-base ${isAI ? 'text-gray-900 dark:text-white' : 'text-white'}`}>
+            <p className={`whitespace-pre-line text-base font-medium ${isAI ? 'text-gray-900 dark:text-white' : 'text-white'}`}>
               {message.content}
             </p>
           )}
@@ -63,9 +63,9 @@ export function ChatMessage({ message, isTyping }: ChatMessageProps) {
       </div>
 
       {!isAI && (
-        <Avatar className="h-10 w-10 mt-1 ring-2 ring-blue-500/30">
-          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600">
-            <User className="h-5 w-5 text-white" />
+        <Avatar className="h-10 w-10 mt-1 ring-2 ring-emerald-500 shadow-lg">
+          <AvatarFallback className="bg-gradient-to-br from-[#10B981] to-[#059669]">
+            <User className="h-6 w-6 text-white stroke-[2.5]" />
           </AvatarFallback>
         </Avatar>
       )}
