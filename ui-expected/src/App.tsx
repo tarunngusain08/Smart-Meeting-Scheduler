@@ -63,13 +63,14 @@ export default function App() {
   }, []);
 
   const handleLogout = () => {
-    // Add beautiful logout animation
+    // Add professional logout animation
     const overlay = document.createElement('div');
     overlay.className = 'logout-overlay';
     overlay.innerHTML = `
       <div class="logout-content">
-        <div class="logout-icon">👋</div>
-        <p class="logout-text">Signing out...</p>
+        <div class="logout-icon">✓</div>
+        <p class="logout-text">Signed Out Successfully</p>
+        <p class="logout-subtext">Redirecting to home...</p>
       </div>
     `;
     document.body.appendChild(overlay);
@@ -89,7 +90,7 @@ export default function App() {
         method: 'POST',
         credentials: 'include',
       }).catch(err => console.error('Logout error:', err));
-    }, 1200);
+    }, 1500);
   };
 
   // Show loading state while checking authentication
