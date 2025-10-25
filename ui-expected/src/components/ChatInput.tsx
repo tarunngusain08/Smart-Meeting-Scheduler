@@ -47,9 +47,9 @@ export function ChatInput({ onSend }: ChatInputProps) {
         <Button
           onClick={handleSend}
           disabled={!input.trim()}
-          className="h-[56px] w-[56px] rounded-xl bg-[#4A8456] hover:bg-[#5B9A68] text-white shadow-lg shadow-emerald-500/30 disabled:opacity-50 disabled:shadow-none disabled:bg-gray-400"
+          className="h-[56px] w-[56px] rounded-xl bg-[#10B981] hover:bg-[#059669] text-white shadow-xl shadow-emerald-500/50 disabled:opacity-50 disabled:shadow-none disabled:bg-gray-400 transition-all"
         >
-          <Send className="h-5 w-5 text-white stroke-[3]" />
+          <Send className="h-6 w-6 text-white stroke-[3]" />
         </Button>
       </div>
 
