@@ -3175,6 +3175,22 @@ html {
     box-shadow: 0 10px 15px -3px rgb(16 185 129 / 0.2), 0 4px 6px -4px rgb(16 185 129 / 0.2);
   }
 
+  .shadow-2xl {
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  }
+
+  .shadow-emerald-500\/50 {
+    box-shadow: 0 25px 50px -12px rgba(16, 185, 129, 0.5);
+  }
+
+  .hover\:shadow-2xl:hover {
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  }
+
+  .hover\:shadow-emerald-500\/50:hover {
+    box-shadow: 0 25px 50px -12px rgba(16, 185, 129, 0.5);
+  }
+
   /* Transition utilities */
   .transition-all {
     transition-property: all;
@@ -3188,8 +3204,18 @@ html {
     transition-duration: 150ms;
   }
 
+  .transition-transform {
+    transition-property: transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+
   .duration-300 {
     transition-duration: 300ms;
+  }
+
+  .duration-500 {
+    transition-duration: 500ms;
   }
 
   .cursor-pointer {
@@ -3201,8 +3227,16 @@ html {
     transform: scale(1.1);
   }
 
+  .hover\:scale-125:hover {
+    transform: scale(1.25);
+  }
+
   .hover\:rotate-3:hover {
     transform: rotate(3deg);
+  }
+
+  .hover\:rotate-12:hover {
+    transform: rotate(12deg);
   }
 
   .hover\:shadow-lg:hover {
@@ -3335,6 +3369,54 @@ html {
     backdrop-filter: blur(4px);
   }
 
+  /* Logout Animation Styles */
+  .logout-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeInOverlay 0.4s ease-out forwards;
+  }
+
+  .logout-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  .logout-icon {
+    font-size: 4rem;
+    animation: wave 0.6s ease-in-out infinite;
+  }
+
+  @keyframes wave {
+    0%, 100% {
+      transform: rotate(0deg);
+    }
+    25% {
+      transform: rotate(20deg);
+    }
+    75% {
+      transform: rotate(-20deg);
+    }
+  }
+
+  .logout-text {
+    color: white;
+    font-size: 1.125rem;
+    font-weight: 600;
+    text-align: center;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
   /* Custom color utilities */
   .bg-\[\#5B9A68\] {
     background-color: #5B9A68;
@@ -3408,12 +3490,72 @@ html {
     background-color: #9CA3AF;
   }
 
+  .bg-gray-500 {
+    background-color: #6B7280;
+  }
+
   .border-gray-300 {
     border-color: #D1D5DB;
   }
 
+  .border-gray-400 {
+    border-color: #9CA3AF;
+  }
+
+  .border-gray-300\/50 {
+    border-color: rgba(209, 213, 219, 0.5);
+  }
+
+  .border-gray-300\/60 {
+    border-color: rgba(209, 213, 219, 0.6);
+  }
+
+  .border-emerald-300\/60 {
+    border-color: rgba(110, 231, 183, 0.6);
+  }
+
+  .border-\[#3D7047\]\/50 {
+    border-color: rgba(61, 112, 71, 0.5);
+  }
+
   .border-2 {
     border-width: 2px;
+  }
+
+  .border-t-2 {
+    border-top-width: 2px;
+  }
+
+  .stroke-\[2\] {
+    stroke-width: 2;
+  }
+
+  .stroke-\[2\.5\] {
+    stroke-width: 2.5;
+  }
+
+  .stroke-\[3\] {
+    stroke-width: 3;
+  }
+
+  .from-gray-100 {
+    --tw-gradient-from: #F3F4F6 var(--tw-gradient-from-position);
+    --tw-gradient-to: rgb(243 244 246 / 0) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+  }
+
+  .from-emerald-200 {
+    --tw-gradient-from: #A7F3D0 var(--tw-gradient-from-position);
+    --tw-gradient-to: rgb(167 243 208 / 0) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+  }
+
+  .to-teal-200 {
+    --tw-gradient-to: #99F6E4 var(--tw-gradient-to-position);
+  }
+
+  .to-gray-50 {
+    --tw-gradient-to: #F9FAFB var(--tw-gradient-to-position);
   }
 
   .from-gray-50 {
