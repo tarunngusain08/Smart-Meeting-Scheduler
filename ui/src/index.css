@@ -3473,6 +3473,33 @@ html {
     background-color: #DCFCE7;
   }
 
+  /* User message bubble with strong visible gradient */
+  .user-message-bubble {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
+    color: white !important;
+    border: 2px solid #059669 !important;
+    box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3), 0 2px 4px -1px rgba(16, 185, 129, 0.2) !important;
+  }
+
+  .user-message-text {
+    color: white !important;
+  }
+
+  /* Gradient utilities for emerald colors */
+  .from-\[#10B981\] {
+    --tw-gradient-from: #10B981 var(--tw-gradient-from-position);
+    --tw-gradient-to: rgb(16 185 129 / 0) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+  }
+
+  .to-\[#059669\] {
+    --tw-gradient-to: #059669 var(--tw-gradient-to-position);
+  }
+
+  .bg-gradient-to-br {
+    background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
+  }
+
   .bg-white {
     background-color: #FFFFFF;
   }
