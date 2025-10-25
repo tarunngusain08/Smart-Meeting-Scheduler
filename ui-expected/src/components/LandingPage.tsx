@@ -76,12 +76,12 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         <div className="flex items-center space-x-3">
           {/* Logo Container */}
           <div
-            className="w-12 h-12 rounded-full bg-[#4A8456] shadow-lg flex items-center justify-center cursor-pointer transition-all duration-500 hover:scale-125 hover:rotate-12 hover:shadow-2xl hover:shadow-emerald-500/50 overflow-hidden"
+            className="w-12 h-12 rounded-2xl bg-[#4A8456] shadow-lg flex items-center justify-center cursor-pointer transition-all duration-500 hover:scale-110 hover:rotate-3 hover:shadow-xl overflow-hidden p-2"
           >
             <img
               src="/images/gruve-logo.png"
               alt="Gruve Logo"
-              className="w-full h-full object-cover rounded-full transition-transform duration-500"
+              className="w-full h-full object-contain rounded-xl transition-transform duration-500"
             />
           </div>
           
