@@ -33,11 +33,11 @@ export function Header({ darkMode, onToggleDarkMode, onLogout }: HeaderProps) {
       <div className="container mx-auto px-4 flex h-16 items-center justify-between max-w-[1400px]">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#4A8456] shadow-lg flex items-center justify-center transition-all duration-500 hover:scale-125 hover:rotate-12 hover:shadow-2xl hover:shadow-emerald-500/50 cursor-pointer overflow-hidden">
+          <div className="w-10 h-10 rounded-2xl bg-[#4A8456] shadow-lg flex items-center justify-center transition-all duration-500 hover:scale-110 hover:rotate-3 hover:shadow-xl cursor-pointer overflow-hidden p-1.5">
             <img
               src="/images/gruve-logo.png"
               alt="Gruve Logo"
-              className="w-full h-full object-cover rounded-full transition-transform duration-500"
+              className="w-full h-full object-contain rounded-xl transition-transform duration-500"
             />
           </div>
           <div>
