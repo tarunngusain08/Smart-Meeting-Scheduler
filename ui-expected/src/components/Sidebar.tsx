@@ -24,13 +24,13 @@ export function Sidebar({ selectedParticipants, nextMeeting }: SidebarProps) {
   return (
     <div className="h-full flex flex-col gap-4">
       {/* Selected Participants */}
-      <Card className="border-slate-200/50 dark:border-slate-700/50 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-lg">
+      <Card className="border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-emerald-500" />
+          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+            <Users className="h-5 w-5 text-[#5B9A68]" />
             Selected Participants
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-gray-600 dark:text-gray-400">
             {selected.length === 0 ? 'No participants selected' : `${selected.length} participant${selected.length > 1 ? 's' : ''} selected`}
           </CardDescription>
         </CardHeader>
@@ -79,10 +79,10 @@ export function Sidebar({ selectedParticipants, nextMeeting }: SidebarProps) {
 
       {/* Next Meeting */}
       {nextMeeting && (
-        <Card className="border-emerald-200/50 dark:border-emerald-800/50 bg-gradient-to-br from-emerald-50 to-teal-50/50 dark:from-emerald-950/50 dark:to-teal-950/50 backdrop-blur-sm shadow-lg">
+        <Card className="border-2 border-[#5B9A68] dark:border-emerald-700 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-950 dark:to-teal-950 shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-emerald-500" />
+            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+              <Calendar className="h-5 w-5 text-[#5B9A68]" />
               Next Meeting
             </CardTitle>
           </CardHeader>
@@ -113,9 +113,9 @@ export function Sidebar({ selectedParticipants, nextMeeting }: SidebarProps) {
       )}
 
       {/* AI Insights */}
-      <Card className="border-slate-200/50 dark:border-slate-700/50 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-lg">
+      <Card className="border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
             <Sparkles className="h-5 w-5 text-amber-500" />
             AI Insights
           </CardTitle>
@@ -156,9 +156,9 @@ export function Sidebar({ selectedParticipants, nextMeeting }: SidebarProps) {
       </Card>
 
       {/* Timezone */}
-      <Card className="border-slate-200/50 dark:border-slate-700/50 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-lg">
+      <Card className="border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
             <Globe className="h-5 w-5 text-blue-500" />
             Time Zone
           </CardTitle>
