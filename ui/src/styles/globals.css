@@ -39,6 +39,7 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --mint-50: #f0fdf7;
 }
 
 .dark {
@@ -117,6 +118,7 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-mint-50: var(--mint-50);
 }
 
 @layer base {
@@ -186,71 +188,4 @@
 
 html {
   font-size: var(--font-size);
-}
-
-/* Custom animations for Gruve Scheduler */
-@keyframes blob {
-  0%, 100% {
-    transform: translate(0px, 0px) scale(1);
-  }
-  33% {
-    transform: translate(30px, -50px) scale(1.1);
-  }
-  66% {
-    transform: translate(-20px, 20px) scale(0.9);
-  }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.animate-blob {
-  animation: blob 7s infinite;
-}
-
-.animate-blob-delay-2s {
-  animation: blob 7s infinite 2s;
-}
-
-.animate-blob-delay-4s {
-  animation: blob 7s infinite 4s;
-}
-
-.animate-slideUp {
-  animation: slideUp 0.5s ease-out;
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out;
-}
-
-/* Custom scrollbar styles */
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
-}
-
-.scrollbar-thumb-green-200::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #bbf7d0, #86efac);
-  border-radius: 2px;
-}
-
-.scrollbar-track-transparent::-webkit-scrollbar-track {
-  background: transparent;
 }
