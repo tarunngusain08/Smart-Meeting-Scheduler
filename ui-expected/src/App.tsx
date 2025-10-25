@@ -63,28 +63,38 @@ export default function App() {
   }, []);
 
   const handleLogout = () => {
-    // Clear authentication data
-    localStorage.removeItem('session_id');
-    localStorage.removeItem('user');
-    setIsAuthenticated(false);
+    // Add beautiful logout animation
+    const overlay = document.createElement('div');
+    overlay.className = 'logout-overlay';
+    overlay.innerHTML = `
+      <div class="logout-content">
+        <div class="logout-icon">👋</div>
+        <p class="logout-text">Signing out...</p>
+      </div>
+    `;
+    document.body.appendChild(overlay);
     
-    // Call backend logout endpoint
-    fetch('http://localhost:8080/auth/logout', {
-      method: 'POST',
-      credentials: 'include',
-    }).catch(err => console.error('Logout error:', err));
+    // Logout and remove overlay after animation
+    setTimeout(() => {
+      // Clear authentication data
+      localStorage.removeItem('session_id');
+      localStorage.removeItem('user');
+      setIsAuthenticated(false);
+      
+      // Remove overlay
+      overlay.remove();
+      
+      // Call backend logout endpoint
+      fetch('http://localhost:8080/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      }).catch(err => console.error('Logout error:', err));
+    }, 1200);
   };
 
   // Show loading state while checking authentication
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-gray-50 via-white to-green-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#00B140] mx-auto mb-4"></div>
-          <p className="text-lg font-medium text-[#111827]">Loading...</p>
-        </div>
-      </div>
-    );
+    return null; // Silent loading - no ugly spinner
   }
 
   return (
