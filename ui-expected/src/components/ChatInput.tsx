@@ -25,7 +25,7 @@ export function ChatInput({ onSend }: ChatInputProps) {
   };
 
   return (
-    <div className="border-t border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 p-4">
+    <div className="border-t-2 border-gray-300/60 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 p-4">
       <div className="flex items-end gap-3">
         <div className="flex-1 relative">
           <Textarea
@@ -33,7 +33,7 @@ export function ChatInput({ onSend }: ChatInputProps) {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask me to schedule, check availability, or coordinate across time zones…"
-            className="min-h-[56px] max-h-[120px] resize-none rounded-xl pr-12 bg-gray-50 dark:bg-slate-700 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-emerald-500"
+            className="min-h-[56px] max-h-[120px] resize-none rounded-xl pr-12 bg-white dark:bg-slate-700 border-2 border-gray-300/60 dark:border-slate-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-emerald-500"
           />
           <Button
             size="icon"
@@ -47,9 +47,9 @@ export function ChatInput({ onSend }: ChatInputProps) {
         <Button
           onClick={handleSend}
           disabled={!input.trim()}
-          className="h-[56px] w-[56px] rounded-xl bg-gradient-to-br from-[#5B9A68] to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg disabled:opacity-50 disabled:shadow-none disabled:from-gray-300 disabled:to-gray-400"
+          className="h-[56px] w-[56px] rounded-xl bg-[#4A8456] hover:bg-[#5B9A68] text-white shadow-lg shadow-emerald-500/30 disabled:opacity-50 disabled:shadow-none disabled:bg-gray-400"
         >
-          <Send className="h-5 w-5 text-white" />
+          <Send className="h-5 w-5 text-white stroke-[3]" />
         </Button>
       </div>
 
