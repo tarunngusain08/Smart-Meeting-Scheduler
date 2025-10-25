@@ -116,7 +116,7 @@ export default function App() {
               <Navigate to="/" replace />
             ) : (
               <div className={darkMode ? 'dark' : ''}>
-                <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-mint-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 transition-colors duration-300">
+                <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 transition-colors duration-300">
                   <Header 
                     darkMode={darkMode} 
                     onToggleDarkMode={() => setDarkMode(!darkMode)}
