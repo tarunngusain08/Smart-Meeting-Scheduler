@@ -25,7 +25,7 @@ export function ChatInput({ onSend }: ChatInputProps) {
   };
 
   return (
-    <div className="border-t border-slate-200/50 dark:border-slate-800/50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm p-4">
+    <div className="border-t border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 p-4">
       <div className="flex items-end gap-3">
         <div className="flex-1 relative">
           <Textarea
@@ -33,12 +33,12 @@ export function ChatInput({ onSend }: ChatInputProps) {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask me to schedule, check availability, or coordinate across time zones…"
-            className="min-h-[56px] max-h-[120px] resize-none rounded-xl pr-12 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus-visible:ring-emerald-500"
+            className="min-h-[56px] max-h-[120px] resize-none rounded-xl pr-12 bg-gray-50 dark:bg-slate-700 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-emerald-500"
           />
           <Button
             size="icon"
             variant="ghost"
-            className="absolute right-2 bottom-2 h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+            className="absolute right-2 bottom-2 h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           >
             <Mic className="h-4 w-4" />
           </Button>
@@ -47,9 +47,9 @@ export function ChatInput({ onSend }: ChatInputProps) {
         <Button
           onClick={handleSend}
           disabled={!input.trim()}
-          className="h-[56px] w-[56px] rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/30 disabled:opacity-50 disabled:shadow-none"
+          className="h-[56px] w-[56px] rounded-xl bg-gradient-to-br from-[#5B9A68] to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg disabled:opacity-50 disabled:shadow-none disabled:from-gray-300 disabled:to-gray-400"
         >
-          <Send className="h-5 w-5" />
+          <Send className="h-5 w-5 text-white" />
         </Button>
       </div>
 
