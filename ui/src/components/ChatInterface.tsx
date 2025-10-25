@@ -143,7 +143,7 @@ export function ChatInterface({ onSignOut }: ChatInterfaceProps) {
   }, [messages]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 relative overflow-hidden">
       {/* Animated Background Blobs */}
       <div className="absolute inset-0 pointer-events-none">
         <div
@@ -161,28 +161,28 @@ export function ChatInterface({ onSignOut }: ChatInterfaceProps) {
       </div>
 
       {/* Header */}
-      <header className="relative z-10 bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0">
+      <header className="relative z-10 bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg border-b border-gray-300/50 dark:border-slate-600 shadow-sm sticky top-0">
         <div className="w-full px-4 py-3">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             <div className="flex items-center space-x-3">
               {/* Gruve Logo */}
-              <div className="w-8 h-8 bg-[#5b9a68] rounded-lg shadow-md flex items-center justify-center hover:scale-110 hover:rotate-3 transition-transform duration-300 cursor-pointer overflow-hidden">
+              <div className="w-10 h-10 bg-[#4A8456] rounded-full shadow-lg flex items-center justify-center transition-all duration-500 hover:scale-125 hover:rotate-12 hover:shadow-2xl hover:shadow-emerald-500/50 cursor-pointer">
                 <img
                   src="/images/gruve-logo.png"
                   alt="Gruve Logo"
-                  className="w-6 h-6 object-contain"
+                  className="w-7 h-7 object-contain transition-transform duration-500"
                 />
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium text-gray-700">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   AI-Powered Meeting Assistant
                 </span>
               </div>
             </div>
             <button
               onClick={onSignOut}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors duration-200 cursor-pointer"
+              className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
               <span className="text-sm">Sign Out</span>
@@ -194,9 +194,9 @@ export function ChatInterface({ onSignOut }: ChatInterfaceProps) {
       {/* Main Content Area with Sidebar */}
       <div className="relative z-0 w-full h-[calc(100vh-64px)] flex px-4 py-4 gap-4">
         {/* Main Chat Area */}
-        <main className="flex-1 flex flex-col bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden max-w-4xl">
+        <main className="flex-1 flex flex-col bg-white dark:bg-slate-800 rounded-2xl shadow-xl border-2 border-gray-300/60 dark:border-slate-600 overflow-hidden max-w-4xl">
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent bg-gray-50/30">
+        <div className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent bg-gradient-to-b from-gray-100 to-gray-50 dark:from-slate-800 dark:to-slate-900">
           {messages.map((message) => (
             <div
               key={message.id}
@@ -206,16 +206,16 @@ export function ChatInterface({ onSignOut }: ChatInterfaceProps) {
             >
               <div className="flex items-start space-x-3 max-w-[85%]">
                 {message.sender === "assistant" && (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-semibold shadow-md flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4A8456] to-[#3D7047] flex items-center justify-center text-white font-semibold shadow-md flex-shrink-0">
                     G
                   </div>
                 )}
                 <div className="flex flex-col space-y-1 flex-1">
                   <div
-                    className={`rounded-2xl px-5 py-3.5 shadow-sm transition-all duration-200 ${
+                    className={`rounded-2xl px-6 py-4 shadow-md transition-all duration-200 ${
                       message.sender === "user"
-                        ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-br-md ml-auto"
-                        : "bg-white text-gray-800 shadow-sm border border-gray-100 rounded-tl-md"
+                        ? "bg-gradient-to-br from-[#4A8456] to-[#3D7047] text-white rounded-br-md ml-auto border-2 border-[#3D7047]/50"
+                        : "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm border-2 border-gray-300/50 dark:border-slate-600 rounded-tl-md"
                     }`}
                   >
                     <p className="whitespace-pre-wrap text-[14px] leading-relaxed">{message.content}</p>
