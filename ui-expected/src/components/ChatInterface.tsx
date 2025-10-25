@@ -153,9 +153,9 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
   };
 
   return (
-    <div className="flex flex-col h-full rounded-2xl border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-xl overflow-hidden">
+    <div className="flex flex-col h-full rounded-2xl border-2 border-gray-300/60 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-xl overflow-hidden">
       {/* Messages Area */}
-      <ScrollArea className="flex-1 p-6 bg-gradient-to-b from-gray-50 to-white dark:from-slate-800 dark:to-slate-900" ref={scrollRef}>
+      <ScrollArea className="flex-1 p-6 bg-gradient-to-b from-gray-100 to-gray-50 dark:from-slate-800 dark:to-slate-900" ref={scrollRef}>
         <div className="space-y-6">
           <AnimatePresence mode="popLayout">
             {messages.map((message, index) => (
