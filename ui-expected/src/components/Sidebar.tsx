@@ -24,10 +24,10 @@ export function Sidebar({ selectedParticipants, nextMeeting }: SidebarProps) {
   return (
     <div className="h-full flex flex-col gap-4">
       {/* Selected Participants */}
-      <Card className="border-2 border-gray-300/50 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 shadow-lg">
+      <Card className="border-2 border-emerald-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
-            <Users className="h-5 w-5 text-[#4A8456]" />
+            <Users className="h-5 w-5 text-[#10B981]" />
             Selected Participants
           </CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-400">
@@ -44,7 +44,7 @@ export function Sidebar({ selectedParticipants, nextMeeting }: SidebarProps) {
               <div className="space-y-3">
                 {selected.map((participant) => (
                   <div key={participant.id} className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10 ring-2 ring-emerald-500/20">
+                    <Avatar className="h-10 w-10 ring-2 ring-emerald-500 shadow-md">
                       <AvatarImage src={participant.avatar} />
                       <AvatarFallback>{participant.name[0]}</AvatarFallback>
                     </Avatar>
@@ -79,10 +79,10 @@ export function Sidebar({ selectedParticipants, nextMeeting }: SidebarProps) {
 
       {/* Next Meeting */}
       {nextMeeting && (
-        <Card className="border-2 border-emerald-300/60 dark:border-emerald-700 bg-gradient-to-br from-emerald-200 to-teal-200 dark:from-emerald-950 dark:to-teal-950 shadow-lg">
+        <Card className="border-2 border-emerald-400 dark:border-emerald-600 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-950 dark:to-teal-950 shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
-              <Calendar className="h-5 w-5 text-[#4A8456]" />
+              <Calendar className="h-5 w-5 text-[#10B981]" />
               Next Meeting
             </CardTitle>
           </CardHeader>
@@ -113,10 +113,10 @@ export function Sidebar({ selectedParticipants, nextMeeting }: SidebarProps) {
       )}
 
       {/* AI Insights */}
-      <Card className="border-2 border-gray-300/50 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 shadow-lg">
+      <Card className="border-2 border-emerald-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
-            <Sparkles className="h-5 w-5 text-amber-500" />
+            <Sparkles className="h-5 w-5 text-[#10B981]" />
             AI Insights
           </CardTitle>
         </CardHeader>
