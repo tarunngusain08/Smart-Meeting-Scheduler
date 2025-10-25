@@ -29,18 +29,22 @@ export function Header({ darkMode, onToggleDarkMode, onLogout }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-200/50 dark:border-slate-800/50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg supports-[backdrop-filter]:bg-white/60">
+    <header className="sticky top-0 z-50 w-full border-b border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-md">
       <div className="container mx-auto px-4 flex h-16 items-center justify-between max-w-[1400px]">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 p-2 shadow-lg shadow-emerald-500/20">
-            <Calendar className="h-6 w-6 text-white" />
+          <div className="w-10 h-10 rounded-xl bg-[#5B9A68] shadow-lg flex items-center justify-center">
+            <img
+              src="/images/gruve-logo.png"
+              alt="Gruve Logo"
+              className="w-7 h-7 object-contain"
+            />
           </div>
           <div>
-            <h1 className="text-slate-900 dark:text-white tracking-tight">
-              AI Meeting Assistant
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">
+              Gruve Scheduler
             </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Smart scheduling made simple</p>
+            <p className="text-xs text-gray-600 dark:text-gray-300">AI-powered meeting assistant</p>
           </div>
         </div>
 
