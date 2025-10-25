@@ -25,9 +25,16 @@ export interface TimeSlot {
   score?: number;
 }
 
+export interface AvailabilityAttendee {
+  email: string;
+  events: CalendarEvent[];
+  available: boolean;
+}
+
 export interface AvailabilityResponse {
-  availableSlots: TimeSlot[];
-  suggestions: TimeSlot[];
+  timeSlot: TimeSlot;
+  attendees: AvailabilityAttendee[];
+  allAvailable: boolean;
   reason?: string;
 }
 
@@ -46,7 +53,80 @@ export async function fetchCalendarEvents(days: number = 7): Promise<CalendarEve
   }));
 }
 
-export async function checkAvailability(
+export interface MeetingRequest {
+  subject: string;
+  timeSlot: {
+    start: Date;
+    end: Date;
+  };
+  attendees: string[];
+  description: string;
+}
+
+export interface AvailabilityRequest {
+  attendees: string[];
+  timeSlot: {
+    start: Date;
+    end: Date;
+  };
+}
+
+export async function scheduleMeeting(request: MeetingRequest): Promise<CalendarEvent> {
+  const response = await fetch('http://localhost:8080/api/calendar/schedule', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to schedule meeting');
+  }
+
+  const event = await response.json();
+  return {
+    ...event,
+    start: new Date(event.start),
+    end: new Date(event.end),
+  };
+}
+
+export async function checkAvailability(request: AvailabilityRequest): Promise<AvailabilityResponse> {
+  const response = await fetch('http://localhost:8080/api/calendar/availability', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to check availability');
+  }
+
+  const availability = await response.json();
+  return {
+    ...availability,
+    availableSlots: availability.availableSlots?.map((slot: any) => ({
+      ...slot,
+      start: new Date(slot.start),
+      end: new Date(slot.end),
+    })) || [],
+    suggestions: availability.suggestions?.map((slot: any) => ({
+      ...slot,
+      start: new Date(slot.start),
+      end: new Date(slot.end),
+    })) || [],
+  };
+}
+
+// Legacy function for backward compatibility
+export async function checkAvailabilityLegacy(
   days: number = 7,
   duration: number = 60,
   attendees: Array<{ email: string; name?: string }> = []
