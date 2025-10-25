@@ -33,17 +33,17 @@ export function TimeSlotCard({ slot, onConfirm }: TimeSlotCardProps) {
       whileHover={{ scale: 1.02 }}
       transition={{ type: 'spring', stiffness: 300 }}
     >
-      <Card className="border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-br from-white to-slate-50/50 dark:from-slate-800 dark:to-slate-800/50 hover:shadow-lg transition-shadow cursor-pointer">
+      <Card className="border-2 border-gray-300/50 dark:border-slate-600 bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 hover:shadow-xl transition-all cursor-pointer">
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-4">
             {/* Left: Time Info */}
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                <Calendar className="h-4 w-4 text-emerald-500" />
-                <span className="text-slate-900 dark:text-white">{slot.date}</span>
+                <Calendar className="h-4 w-4 text-[#4A8456]" />
+                <span className="text-gray-900 dark:text-white font-medium">{slot.date}</span>
                 <Badge 
                   variant="secondary" 
-                  className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
+                  className="bg-emerald-200 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700"
                 >
                   <TrendingUp className="h-3 w-3 mr-1" />
                   {slot.confidence}% match
@@ -51,13 +51,13 @@ export function TimeSlotCard({ slot, onConfirm }: TimeSlotCardProps) {
               </div>
 
               <div className="flex items-center gap-2 mb-3">
-                <Clock className="h-4 w-4 text-slate-500" />
-                <span className="text-slate-700 dark:text-slate-200">{slot.time}</span>
-                <span className="text-xs text-slate-500">({slot.duration})</span>
+                <Clock className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                <span className="text-gray-900 dark:text-white font-medium">{slot.time}</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">({slot.duration})</span>
               </div>
 
               <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-slate-500" />
+                <Users className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                 <div className="flex -space-x-2">
                   {slot.participants.slice(0, 3).map((name, idx) => (
                     <Avatar key={idx} className="h-6 w-6 ring-2 ring-white dark:ring-slate-800">
@@ -73,7 +73,7 @@ export function TimeSlotCard({ slot, onConfirm }: TimeSlotCardProps) {
                     </div>
                   )}
                 </div>
-                <span className="text-xs text-emerald-600 dark:text-emerald-400 ml-2">
+                <span className="text-xs text-[#4A8456] dark:text-emerald-400 font-medium ml-2">
                   {slot.availability}
                 </span>
               </div>
@@ -84,7 +84,7 @@ export function TimeSlotCard({ slot, onConfirm }: TimeSlotCardProps) {
               <Button
                 size="sm"
                 onClick={() => onConfirm(slot)}
-                className="bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-md shadow-emerald-500/30"
+                className="bg-gradient-to-br from-[#4A8456] to-[#3D7047] hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md"
               >
                 <CheckCircle2 className="h-4 w-4 mr-1" />
                 Confirm
@@ -94,7 +94,7 @@ export function TimeSlotCard({ slot, onConfirm }: TimeSlotCardProps) {
                   size="icon"
                   variant="outline"
                   onClick={handleRefresh}
-                  className="h-8 w-8"
+                  className="h-8 w-8 border-2 border-gray-300/60 dark:border-slate-600"
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
                 </Button>
@@ -102,7 +102,7 @@ export function TimeSlotCard({ slot, onConfirm }: TimeSlotCardProps) {
                   size="icon"
                   variant="outline"
                   onClick={handleAdjust}
-                  className="h-8 w-8"
+                  className="h-8 w-8 border-2 border-gray-300/60 dark:border-slate-600"
                 >
                   <Settings2 className="h-3.5 w-3.5" />
                 </Button>
