@@ -54,35 +54,35 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
     >
-      <Card className="border-slate-200/50 dark:border-slate-700/50 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm shadow-lg">
+      <Card className="border-2 border-gray-300/50 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-xl">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-emerald-500" />
+          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+            <Calendar className="h-5 w-5 text-[#4A8456]" />
             Schedule a Meeting
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-gray-600 dark:text-gray-400">
             Select participants, date range, and duration to find optimal slots
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Participants */}
           <div>
-            <label className="flex items-center gap-2 mb-2 text-slate-700 dark:text-slate-200">
+            <label className="flex items-center gap-2 mb-2 text-gray-900 dark:text-white font-medium">
               <Users className="h-4 w-4" />
               Participants
             </label>
             <div className="relative">
               <Button
                 variant="outline"
-                className="w-full justify-start text-left h-auto min-h-[44px] hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                className="w-full justify-start text-left h-auto min-h-[44px] border-2 border-gray-300/60 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700"
                 onClick={() => setShowParticipants(!showParticipants)}
               >
                 {selectedParticipants.length === 0 ? (
-                  <span className="text-slate-500">Select participants...</span>
+                  <span className="text-gray-500 dark:text-gray-400">Select participants...</span>
                 ) : (
                   <div className="flex flex-wrap gap-1.5">
                     {selectedParticipants.map((name) => (
-                      <Badge key={name} variant="secondary" className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">
+                      <Badge key={name} variant="secondary" className="bg-emerald-200 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700">
                         {name}
                       </Badge>
                     ))}
@@ -94,14 +94,14 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="absolute z-10 w-full mt-2 p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl"
+                  className="absolute z-10 w-full mt-2 p-2 rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-2xl"
                 >
                   <div className="relative mb-2">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <input
                       type="text"
                       placeholder="Search participants..."
-                      className="w-full pl-9 pr-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-500"
+                      className="w-full pl-9 pr-3 py-2 rounded-md border-2 border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
                     />
                   </div>
                   <div className="space-y-1 max-h-[200px] overflow-y-auto">
@@ -109,18 +109,18 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
                       <button
                         key={participant.id}
                         onClick={() => toggleParticipant(participant.name)}
-                        className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                        className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
                       >
                         <Avatar className="h-8 w-8">
                           <AvatarImage src={participant.avatar} />
                           <AvatarFallback>{participant.name[0]}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 text-left">
-                          <p className="text-slate-900 dark:text-slate-100">{participant.name}</p>
-                          <p className="text-xs text-slate-500">{participant.role}</p>
+                          <p className="text-gray-900 dark:text-white font-medium">{participant.name}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">{participant.role}</p>
                         </div>
                         {selectedParticipants.includes(participant.name) && (
-                          <div className="h-5 w-5 rounded-full bg-emerald-500 flex items-center justify-center">
+                          <div className="h-5 w-5 rounded-full bg-[#4A8456] flex items-center justify-center">
                             <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
@@ -136,7 +136,7 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
 
           {/* Date Range */}
           <div>
-            <label className="flex items-center gap-2 mb-2 text-slate-700 dark:text-slate-200">
+            <label className="flex items-center gap-2 mb-2 text-gray-900 dark:text-white font-medium">
               <Calendar className="h-4 w-4" />
               Date Range
             </label>
@@ -148,8 +148,8 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
                   onClick={() => setDateRange(range.toLowerCase().replace(' ', '-'))}
                   className={
                     dateRange === range.toLowerCase().replace(' ', '-')
-                      ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                      : ''
+                      ? 'bg-gradient-to-br from-[#4A8456] to-[#3D7047] text-white border-[#3D7047]'
+                      : 'border-2 border-gray-300/60 dark:border-slate-600'
                   }
                 >
                   {range}
@@ -160,7 +160,7 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
 
           {/* Duration */}
           <div>
-            <label className="flex items-center gap-2 mb-2 text-slate-700 dark:text-slate-200">
+            <label className="flex items-center gap-2 mb-2 text-gray-900 dark:text-white font-medium">
               <Clock className="h-4 w-4" />
               Duration
             </label>
@@ -181,7 +181,7 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
           <Button
             onClick={handleFindSlot}
             disabled={selectedParticipants.length === 0 || isLoading}
-            className="w-full bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/30"
+            className="w-full bg-gradient-to-br from-[#4A8456] to-[#3D7047] hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg disabled:opacity-50"
           >
             {isLoading ? (
               <>
