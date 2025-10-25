@@ -12,9 +12,22 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
     // Clear any existing state
     localStorage.clear();
     
-    // Redirect to backend auth endpoint which will redirect to Microsoft Teams
-    const redirectUri = encodeURIComponent(window.location.origin + '/auth/callback');
-    window.location.href = `http://localhost:8080/auth/login?redirect_uri=${redirectUri}`;
+    // Add beautiful fade-out animation before redirect
+    const overlay = document.createElement('div');
+    overlay.className = 'redirect-overlay';
+    overlay.innerHTML = `
+      <div class="redirect-content">
+        <div class="redirect-spinner"></div>
+        <p class="redirect-text">Connecting to Microsoft Teams...</p>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    
+    // Redirect after animation starts
+    setTimeout(() => {
+      const redirectUri = encodeURIComponent(window.location.origin + '/auth/callback');
+      window.location.href = `http://localhost:8080/auth/login?redirect_uri=${redirectUri}`;
+    }, 600);
   };
 
   return (
@@ -63,12 +76,12 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         <div className="flex items-center space-x-3">
           {/* Logo Container */}
           <div
-            className="w-12 h-12 rounded-xl bg-[#5B9A68] shadow-lg flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-110 hover:rotate-3"
+            className="w-12 h-12 rounded-full bg-[#4A8456] shadow-lg flex items-center justify-center cursor-pointer transition-all duration-500 hover:scale-125 hover:rotate-12 hover:shadow-2xl hover:shadow-emerald-500/50 overflow-hidden"
           >
             <img
               src="/images/gruve-logo.png"
               alt="Gruve Logo"
-              className="w-8 h-8 object-contain"
+              className="w-full h-full object-cover rounded-full transition-transform duration-500"
             />
           </div>
           
@@ -259,6 +272,83 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
 
         .animate-fadeIn {
           animation: fadeIn 500ms ease-out forwards;
+        }
+
+        /* Redirect Animation Styles */
+        .redirect-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          background: linear-gradient(135deg, rgba(74, 132, 86, 0.95), rgba(16, 185, 129, 0.95));
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+          animation: fadeInOverlay 0.4s ease-out forwards;
+        }
+
+        @keyframes fadeInOverlay {
+          from {
+            opacity: 0;
+            backdrop-filter: blur(0px);
+          }
+          to {
+            opacity: 1;
+            backdrop-filter: blur(10px);
+          }
+        }
+
+        .redirect-content {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1.5rem;
+          animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes scaleIn {
+          from {
+            transform: scale(0.8);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+
+        .redirect-spinner {
+          width: 60px;
+          height: 60px;
+          border: 4px solid rgba(255, 255, 255, 0.3);
+          border-top-color: white;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        .redirect-text {
+          color: white;
+          font-size: 1.125rem;
+          font-weight: 600;
+          text-align: center;
+          animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.7;
+          }
         }
 
         /* Respect user's motion preferences */
