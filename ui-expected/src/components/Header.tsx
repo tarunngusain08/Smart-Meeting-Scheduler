@@ -29,15 +29,15 @@ export function Header({ darkMode, onToggleDarkMode, onLogout }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-md">
+    <header className="sticky top-0 z-50 w-full border-b border-gray-300/50 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-md">
       <div className="container mx-auto px-4 flex h-16 items-center justify-between max-w-[1400px]">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#5B9A68] shadow-lg flex items-center justify-center">
+          <div className="w-10 h-10 rounded-full bg-[#4A8456] shadow-lg flex items-center justify-center transition-all duration-500 hover:scale-125 hover:rotate-12 hover:shadow-2xl hover:shadow-emerald-500/50 cursor-pointer overflow-hidden">
             <img
               src="/images/gruve-logo.png"
               alt="Gruve Logo"
-              className="w-7 h-7 object-contain"
+              className="w-full h-full object-cover rounded-full transition-transform duration-500"
             />
           </div>
           <div>
