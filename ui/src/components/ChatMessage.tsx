@@ -32,7 +32,7 @@ export function ChatMessage({ message, isTyping }: ChatMessageProps) {
           className={`rounded-2xl px-6 py-4 shadow-md ${
             isAI
               ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white border-2 border-emerald-200 dark:border-slate-600'
-              : 'bg-gradient-to-br from-[#10B981] to-[#059669] text-white shadow-lg border-2 border-emerald-600'
+              : 'user-message-bubble'
           }`}
         >
           {isTyping ? (
@@ -51,7 +51,7 @@ export function ChatMessage({ message, isTyping }: ChatMessageProps) {
               ))}
             </div>
           ) : (
-            <p className={`whitespace-pre-line text-base font-medium ${isAI ? 'text-gray-900 dark:text-white' : 'text-white'}`}>
+            <p className={`whitespace-pre-line text-base font-medium ${isAI ? 'text-gray-900 dark:text-white' : 'user-message-text'}`}>
               {message.content}
             </p>
           )}
