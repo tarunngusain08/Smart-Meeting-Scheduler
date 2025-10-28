@@ -1,11 +1,12 @@
-import { useState } from 'react';
-import { Users, Calendar, Clock, Search, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Users, Calendar, Clock, Search, Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { motion } from 'motion/react';
+import { getAllUsers, userToParticipant, Participant } from '../api/users';
 
 interface ScheduleMeetingCardProps {
   onSchedule: (data: any) => void;
@@ -13,19 +14,35 @@ interface ScheduleMeetingCardProps {
   setSelectedParticipants: (participants: string[]) => void;
 }
 
-const availableParticipants = [
-  { id: '1', name: 'Sarah Johnson', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah', role: 'Product Manager' },
-  { id: '2', name: 'Mike Chen', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike', role: 'Designer' },
-  { id: '3', name: 'Alex Rivera', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex', role: 'Engineer' },
-  { id: '4', name: 'Emma Davis', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emma', role: 'Marketing' },
-  { id: '5', name: 'James Wilson', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=James', role: 'Sales' },
-];
 
 export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelectedParticipants }: ScheduleMeetingCardProps) {
   const [dateRange, setDateRange] = useState('this-week');
   const [duration, setDuration] = useState('1h');
   const [isLoading, setIsLoading] = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
+  const [availableParticipants, setAvailableParticipants] = useState<Participant[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [usersError, setUsersError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setIsLoadingUsers(true);
+        setUsersError(null);
+        const users = await getAllUsers();
+        const participants = users.map(userToParticipant);
+        setAvailableParticipants(participants);
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
+        setUsersError('Failed to load users. Please try again.');
+      } finally {
+        setIsLoadingUsers(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
 
   const toggleParticipant = (name: string) => {
     if (selectedParticipants.includes(name)) {
@@ -34,6 +51,11 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
       setSelectedParticipants([...selectedParticipants, name]);
     }
   };
+
+  const filteredParticipants = availableParticipants.filter((p) =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleFindSlot = () => {
     if (selectedParticipants.length === 0) return;
@@ -101,11 +123,28 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
                     <input
                       type="text"
                       placeholder="Search participants..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full pl-9 pr-3 py-2 rounded-md border-2 border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
                     />
                   </div>
                   <div className="space-y-1 max-h-[200px] overflow-y-auto">
-                    {availableParticipants.map((participant) => (
+                    {isLoadingUsers ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                        <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Loading users...</span>
+                      </div>
+                    ) : usersError ? (
+                      <div className="flex items-center gap-2 p-3 text-red-600 dark:text-red-400">
+                        <AlertCircle className="h-4 w-4" />
+                        <span className="text-sm">{usersError}</span>
+                      </div>
+                    ) : filteredParticipants.length === 0 ? (
+                      <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
+                        No users found
+                      </div>
+                    ) : (
+                      filteredParticipants.map((participant) => (
                       <button
                         key={participant.id}
                         onClick={() => toggleParticipant(participant.name)}
@@ -127,7 +166,7 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
                           </div>
                         )}
                       </button>
-                    ))}
+                    )))}
                   </div>
                 </motion.div>
               )}
