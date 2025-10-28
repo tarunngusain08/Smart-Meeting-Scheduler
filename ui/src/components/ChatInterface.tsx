@@ -6,6 +6,18 @@ import { TimeSlotCard } from './TimeSlotCard';
 import { ScrollArea } from './ui/scroll-area';
 import { motion, AnimatePresence } from 'motion/react';
 import { handleUserPrompt } from '../api/chat';
+import { 
+  checkQuickAvailability as checkQuickAvailabilityNew,
+  getCalendarEvents,
+  findMeetingTimes,
+  createMeeting,
+  smartScheduleMeeting,
+  parseEvent,
+  parseMeetingSuggestion,
+  type Event,
+  type MeetingSuggestion as BackendMeetingSuggestion
+} from '../api/calendarNew';
+import { format, addDays } from 'date-fns';
 
 interface Message {
   id: string;
@@ -99,57 +111,219 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
     return message;
   };
 
-  const handleScheduleMeeting = (data: any) => {
+  const handleScheduleMeeting = async (data: any) => {
     setIsTyping(true);
-    setTimeout(() => {
-      const response: Message = {
+    try {
+      // Extract data from the schedule widget
+      const { title, duration, participants, startDate, endDate } = data;
+      
+      // Use the new findMeetingTimes API
+      const startTime = startDate || new Date();
+      const endTime = endDate || addDays(startTime, 7);
+      
+      const response = await findMeetingTimes({
+        attendees: participants,
+        duration: duration || 60,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        maxSuggestions: 5,
+      });
+
+      if (response.suggestions.length > 0) {
+        // Format suggestions for display
+        const slots = response.suggestions.map((suggestion, index) => {
+          const start = new Date(suggestion.start);
+          const end = new Date(suggestion.end);
+          return {
+            id: index.toString(),
+            date: format(start, 'EEEE, MMM d'),
+            time: `${format(start, 'h:mm a')} - ${format(end, 'h:mm a')}`,
+            duration: duration || 60,
+            participants: participants,
+            availability: 'All available',
+            confidence: suggestion.confidence || 90,
+            rawStart: suggestion.start,
+            rawEnd: suggestion.end,
+            title: title || 'Team Meeting',
+          };
+        });
+
+        const aiMessage: Message = {
+          id: Date.now().toString(),
+          type: 'ai',
+          content: `Great! I've found ${slots.length} available time slots for ${participants.length} participant(s). Here are my top recommendations:`,
+          timestamp: new Date(),
+          slots,
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+      } else {
+        const aiMessage: Message = {
+          id: Date.now().toString(),
+          type: 'ai',
+          content: response.message || 'Sorry, I couldn\'t find any available time slots for all participants in the specified time range. Would you like to try a different time range?',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+      }
+    } catch (error) {
+      console.error('Error finding meeting times:', error);
+      const errorMessage: Message = {
         id: Date.now().toString(),
         type: 'ai',
-        content: `Great! I've found the best available slots for ${data.participants.length} participants. Here are my top recommendations:`,
+        content: `Sorry, I encountered an error while finding available times: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
         timestamp: new Date(),
-        slots: [
-          {
-            id: '1',
-            date: 'Tomorrow',
-            time: '2:00 PM - 3:00 PM',
-            duration: data.duration,
-            participants: data.participants,
-            availability: 'All available',
-            confidence: 95,
-          },
-          {
-            id: '2',
-            date: 'Thursday',
-            time: '10:00 AM - 11:00 AM',
-            duration: data.duration,
-            participants: data.participants,
-            availability: 'All available',
-            confidence: 88,
-          },
-        ],
       };
-      setMessages((prev) => [...prev, response]);
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 2000);
+    }
   };
 
-  const handleConfirmSlot = (slot: any) => {
-    const meeting = {
-      title: 'Team Meeting',
-      date: slot.date,
-      time: slot.time,
-      duration: slot.duration,
-      participants: slot.participants,
-    };
-    onMeetingScheduled(meeting);
+  const handleConfirmSlot = async (slot: any) => {
+    setIsTyping(true);
+    try {
+      // Create the meeting using the backend API
+      const result = await createMeeting({
+        subject: slot.title || 'Team Meeting',
+        start: slot.rawStart,
+        end: slot.rawEnd,
+        attendees: slot.participants,
+        isOnline: true,
+        description: `Meeting scheduled via AI Assistant`,
+      });
 
-    const confirmMessage: Message = {
-      id: Date.now().toString(),
-      type: 'ai',
-      content: `Perfect! I've scheduled your meeting for ${slot.date} at ${slot.time}. Calendar invites have been sent to all participants. Is there anything else I can help you with?`,
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, confirmMessage]);
+      // Notify parent component
+      const meeting = {
+        ...result.event,
+        title: result.event.subject,
+        date: slot.date,
+        time: slot.time,
+        duration: slot.duration,
+        participants: slot.participants,
+      };
+      onMeetingScheduled(meeting);
+
+      const confirmMessage: Message = {
+        id: Date.now().toString(),
+        type: 'ai',
+        content: `Perfect! I've scheduled your meeting "${result.event.subject}" for ${slot.date} at ${slot.time}. ${result.event.isOnline && result.event.onlineUrl ? `\n\n🔗 Teams Meeting Link: ${result.event.onlineUrl}` : ''}\n\nCalendar invites have been sent to all ${slot.participants.length} participant(s). Is there anything else I can help you with?`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, confirmMessage]);
+    } catch (error) {
+      console.error('Error creating meeting:', error);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        type: 'ai',
+        content: `Sorry, I encountered an error while creating the meeting: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const handleQuickAction = async (action: string) => {
+    setIsTyping(true);
+    
+    try {
+      let timeRange: 'today' | 'tomorrow' | 'next-week' | 'this-week' = 'next-week';
+      
+      if (action === 'check-next-week') {
+        timeRange = 'next-week';
+      } else if (action === 'check-this-week') {
+        timeRange = 'this-week';
+      } else if (action === 'check-today') {
+        timeRange = 'today';
+      } else if (action === 'check-tomorrow') {
+        timeRange = 'tomorrow';
+      }
+      
+      // Get user email from session/context (for now, use a placeholder)
+      // In production, this should come from auth context
+      const userEmail = 'user@example.com'; // TODO: Get from auth context
+      
+      // Call the new API
+      const response = await checkQuickAvailabilityNew(
+        userEmail,
+        timeRange,
+        selectedParticipants.length > 0 ? selectedParticipants : undefined
+      );
+      
+      // Format response message
+      let content = `📅 **Availability for ${response.timeRange}**\n\n`;
+      
+      const { availability, suggestions } = response;
+      
+      // Show free slots
+      if (availability.freeSlots.length > 0) {
+        content += `✅ **Available Slots** (${availability.freeSlots.length} found):\n`;
+        availability.freeSlots.slice(0, 5).forEach((slot, index) => {
+          const start = new Date(slot.start);
+          const end = new Date(slot.end);
+          const startTime = format(start, 'EEE, MMM d • h:mm a');
+          const endTime = format(end, 'h:mm a');
+          content += `${index + 1}. ${startTime} - ${endTime}\n`;
+        });
+        if (availability.freeSlots.length > 5) {
+          content += `\n_...and ${availability.freeSlots.length - 5} more slots_\n`;
+        }
+      }
+      
+      // Show busy slots
+      if (availability.busySlots.length > 0) {
+        content += `\n🔴 **Busy Times** (${availability.busySlots.length} scheduled):\n`;
+        availability.busySlots.slice(0, 3).forEach((slot, index) => {
+          const start = new Date(slot.start);
+          const end = new Date(slot.end);
+          const startTime = format(start, 'EEE, MMM d • h:mm a');
+          const endTime = format(end, 'h:mm a');
+          content += `${index + 1}. ${startTime} - ${endTime}\n`;
+        });
+        if (availability.busySlots.length > 3) {
+          content += `\n_...and ${availability.busySlots.length - 3} more_\n`;
+        }
+      }
+      
+      // Show meeting suggestions if attendees were provided
+      if (suggestions && suggestions.length > 0) {
+        content += `\n\n💡 **Best Meeting Times** (for ${selectedParticipants.length} attendees):\n`;
+        suggestions.slice(0, 3).forEach((suggestion, index) => {
+          const start = new Date(suggestion.start);
+          const end = new Date(suggestion.end);
+          const startTime = format(start, 'EEE, MMM d • h:mm a');
+          const endTime = format(end, 'h:mm a');
+          const confidence = suggestion.confidence ? ` (${Math.round(suggestion.confidence)}% confidence)` : '';
+          content += `${index + 1}. ${startTime} - ${endTime}${confidence}\n`;
+        });
+      }
+      
+      // Summary
+      content += `\n📊 **Summary:**\n`;
+      content += `• Free time: ${availability.totalFreeTimeMinutes} minutes\n`;
+      content += `• Busy time: ${availability.totalBusyTimeMinutes} minutes\n`;
+      
+      const aiMessage: Message = {
+        id: Date.now().toString(),
+        type: 'ai',
+        content,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+      
+    } catch (error) {
+      console.error('Error checking quick availability:', error);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        type: 'ai',
+        content: `❌ Sorry, I encountered an error checking availability: ${error instanceof Error ? error.message : 'Unknown error'}. Please make sure you're logged in and try again.`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (
@@ -223,7 +397,7 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
       </ScrollArea>
 
       {/* Input Area */}
-      <ChatInput onSend={handleSendMessage} />
+      <ChatInput onSend={handleSendMessage} onQuickAction={handleQuickAction} />
     </div>
   );
 }
