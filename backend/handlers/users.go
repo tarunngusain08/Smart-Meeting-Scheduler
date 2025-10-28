@@ -82,6 +82,7 @@ func SyncUsers(cfg *config.Config) gin.HandlerFunc {
 }
 
 // SearchUsers handles user search requests using the local database
+// If no query is provided, returns all users
 func SearchUsers(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if err := initUserStore(cfg); err != nil {
@@ -90,16 +91,40 @@ func SearchUsers(cfg *config.Config) gin.HandlerFunc {
 		}
 
 		query := c.Query("q")
+		
+		var users []models.MSUser
+		var err error
+		
 		if query == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Search query is required"})
+			// If no query, return all users
+			users, err = userStore.GetAllUsers()
+		} else {
+			// Search in local database
+			users, err = userStore.SearchUsers(query)
+		}
+		
+		if err != nil {
+			log.Printf("Failed to fetch users: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
 			return
 		}
 
-		// Search in local database
-		users, err := userStore.SearchUsers(query)
+		c.JSON(http.StatusOK, users)
+	}
+}
+
+// GetAllUsers retrieves all users from the database
+func GetAllUsers(cfg *config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := initUserStore(cfg); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initialize database"})
+			return
+		}
+
+		users, err := userStore.GetAllUsers()
 		if err != nil {
-			log.Printf("Failed to search users: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search users"})
+			log.Printf("Failed to fetch all users: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
 			return
 		}
 
