@@ -82,7 +82,7 @@ export function Header({ darkMode, onToggleDarkMode, onLogout }: HeaderProps) {
                 onClick={() => console.log('Avatar clicked!')}
               >
                 <Avatar className="h-9 w-9 ring-2 ring-emerald-500/20 cursor-pointer">
-                  <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=User" />
+                  <AvatarImage src={`${import.meta.env.VITE_AVATAR_API_URL || 'https://api.dicebear.com/7.x/avataaars/svg'}?seed=${user.name}`} />
                   <AvatarFallback className="bg-emerald-100 text-emerald-700">{user.name?.charAt(0) || 'U'}</AvatarFallback>
                 </Avatar>
               </button>
