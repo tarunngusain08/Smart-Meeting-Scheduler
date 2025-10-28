@@ -78,14 +78,20 @@ src/
 
 ## Environment Configuration
 
-The application expects the backend to be running on:
-- **Backend API:** `http://localhost:8080`
-- **AI Chat Endpoint:** `https://radhey.app.n8n.cloud/webhook/handle-user-prompt`
+Copy `config.env` to `.env` in the UI directory and modify the values according to your environment:
 
-To change these, update:
-- Backend URL in `src/components/LandingPage.tsx` (line 17)
-- Backend URL in `src/components/AuthCallback.tsx` (line 20)
-- AI endpoint in `src/api/chat.ts` (line 16)
+- **VITE_BACKEND_URL**: Backend server URL (default: `http://localhost:8080`)
+- **VITE_CHAT_API_URL**: AI chat service URL (default: `https://radhey.app.n8n.cloud/webhook/handle-user-prompt`)
+- **VITE_AVATAR_API_URL**: Avatar generation service URL (default: `https://api.dicebear.com/7.x/avataaars/svg`)
+
+### Example .env file:
+```bash
+VITE_BACKEND_URL=http://localhost:8080
+VITE_CHAT_API_URL=https://my-custom-chat-api.com/webhook/chat
+VITE_AVATAR_API_URL=https://my-avatar-service.com/api/avatar
+```
+
+To change these, copy `config.env` to `.env` and update the values. The application will automatically use the environment variables at build time.
 
 ## Authentication Flow Details
 
@@ -143,14 +149,19 @@ This sends the user's message to the AI backend and returns the assistant's resp
 ## Troubleshooting
 
 ### Authentication Issues
-- Ensure backend is running on `http://localhost:8080`
+- Ensure backend is running and accessible at the URL specified in `VITE_BACKEND_URL`
 - Check Microsoft Teams OAuth credentials in backend
 - Verify redirect URIs match in Azure AD app registration
+- Copy `config.env` to `.env` and verify the backend URL is correct
 
 ### Chat Not Working
-- Check AI endpoint is accessible: `https://radhey.app.n8n.cloud/webhook/handle-user-prompt`
+- Check AI endpoint is accessible at the URL specified in `VITE_CHAT_API_URL`
 - Verify network requests in browser DevTools
 - Check console for error messages
+
+### Avatar Images Not Loading
+- Verify `VITE_AVATAR_API_URL` points to a valid avatar service
+- Check network requests for avatar images in DevTools
 
 ### Build Errors
 - Run `npm install` to ensure all dependencies are installed
