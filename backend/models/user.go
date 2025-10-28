@@ -151,3 +151,34 @@ func (s *UserStore) SearchUsers(query string) ([]MSUser, error) {
 
 	return users, nil
 }
+
+// GetAllUsers retrieves all users from the database
+func (s *UserStore) GetAllUsers() ([]MSUser, error) {
+	rows, err := s.db.Query(`
+		SELECT 
+			id, 
+			display_name, 
+			email, 
+			user_principal_name, 
+			last_synced
+		FROM users
+		ORDER BY display_name ASC
+	`)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []MSUser
+	for rows.Next() {
+		var user MSUser
+		err := rows.Scan(&user.ID, &user.DisplayName, &user.Email, &user.UserPrincipalName, &user.LastSynced)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+
+	return users, nil
+}
