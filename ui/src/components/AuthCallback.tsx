@@ -18,7 +18,7 @@ export function AuthCallback() {
         }
 
         // Exchange the code for tokens
-        const response = await fetch('http://localhost:8080/auth/callback', {
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080'}/auth/callback`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
