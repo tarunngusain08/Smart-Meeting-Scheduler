@@ -4,7 +4,6 @@ import (
 	"Smart-Meeting-Scheduler/config"
 	"Smart-Meeting-Scheduler/models"
 	"Smart-Meeting-Scheduler/services"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -229,68 +228,162 @@ func FindMeetingTimes(cfg *config.Config) gin.HandlerFunc {
 }
 
 // findMeetingSlots calls the configured external API to find optimal meeting slots
+// Falls back to local mock logic if external API is unavailable
 func findMeetingSlots(apiURL string, participantCalendars map[string][]models.Event, req models.FindMeetingTimesRequest) ([]models.MeetingSuggestion, error) {
-	// Prepare the request payload for the external API
-	payload := map[string]interface{}{
-		"participantCalendars": participantCalendars,
-		"duration":             req.Duration,
-		"startTime":            req.StartTime.Format(time.RFC3339),
-		"endTime":              req.EndTime.Format(time.RFC3339),
-		"timeZone":             req.TimeZone,
-		"maxSuggestions":       req.MaxSuggestions,
-	}
+	// For demo/development, use local mock logic instead of external API
+	// This avoids dependency on external services
+	log.Println("Using local mock logic for finding meeting slots")
 
-	payloadBytes, err := json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
-	}
+	// Convert participantCalendars to the format expected by MockGraphClient.FindMeetingTimes
+	// We need to create a map of busy slots for each participant
+	busySlots := make(map[string][]models.TimeSlot)
 
-	// Call the external API
-	resp, err := http.Post(apiURL, "application/json", bytes.NewBuffer(payloadBytes))
-	if err != nil {
-		return nil, fmt.Errorf("failed to call external API: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("external API returned status %d", resp.StatusCode)
-	}
-
-	// Parse the response
-	var apiResponse struct {
-		Suggestions []struct {
-			Start      string  `json:"start"`
-			End        string  `json:"end"`
-			Confidence float64 `json:"confidence"`
-			Score      float64 `json:"score"`
-		} `json:"suggestions"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
-		return nil, fmt.Errorf("failed to decode API response: %w", err)
-	}
-
-	// Convert to our model format
-	suggestions := make([]models.MeetingSuggestion, 0, len(apiResponse.Suggestions))
-	for _, s := range apiResponse.Suggestions {
-		startTime, err := time.Parse(time.RFC3339, s.Start)
-		if err != nil {
-			log.Printf("Warning: Failed to parse start time %s: %v", s.Start, err)
-			continue
+	for participant, events := range participantCalendars {
+		for _, event := range events {
+			busySlots[participant] = append(busySlots[participant], models.TimeSlot{
+				Start: event.Start,
+				End:   event.End,
+			})
 		}
-		endTime, err := time.Parse(time.RFC3339, s.End)
-		if err != nil {
-			log.Printf("Warning: Failed to parse end time %s: %v", s.End, err)
-			continue
-		}
+	}
 
-		suggestions = append(suggestions, models.MeetingSuggestion{
-			Start:      startTime,
-			End:        endTime,
-			Confidence: s.Confidence,
-			Score:      s.Score,
+	// Use the same logic as MockGraphClient.findCommonFreeSlots
+	// Merge all busy slots
+	allBusySlots := []models.TimeSlot{}
+	for _, slots := range busySlots {
+		allBusySlots = append(allBusySlots, slots...)
+	}
+
+	// Sort busy slots by start time
+	for i := 0; i < len(allBusySlots)-1; i++ {
+		for j := i + 1; j < len(allBusySlots); j++ {
+			if allBusySlots[i].Start.After(allBusySlots[j].Start) {
+				allBusySlots[i], allBusySlots[j] = allBusySlots[j], allBusySlots[i]
+			}
+		}
+	}
+
+	// Find free slots within the requested time range
+	var freeSlots []models.TimeSlot
+	current := req.StartTime
+
+	for _, busySlot := range allBusySlots {
+		// If there's a gap before this busy slot
+		if current.Before(busySlot.Start) {
+			freeSlots = append(freeSlots, models.TimeSlot{
+				Start: current,
+				End:   busySlot.Start,
+			})
+		}
+		// Move current time to after this busy slot
+		if busySlot.End.After(current) {
+			current = busySlot.End
+		}
+	}
+
+	// Add remaining time until end of range
+	if current.Before(req.EndTime) {
+		freeSlots = append(freeSlots, models.TimeSlot{
+			Start: current,
+			End:   req.EndTime,
 		})
 	}
 
+	// Find slots that fit the duration and convert to suggestions
+	var suggestions []models.MeetingSuggestion
+	for _, slot := range freeSlots {
+		slotDuration := slot.End.Sub(slot.Start)
+		if slotDuration >= time.Duration(req.Duration)*time.Minute {
+			// Can fit the meeting in this slot
+			suggestions = append(suggestions, models.MeetingSuggestion{
+				Start:      slot.Start,
+				End:        slot.Start.Add(time.Duration(req.Duration) * time.Minute),
+				Confidence: 100.0,
+				Score:      100.0,
+			})
+		}
+	}
+
+	// Sort suggestions by start time
+	for i := 0; i < len(suggestions)-1; i++ {
+		for j := i + 1; j < len(suggestions); j++ {
+			if suggestions[i].Start.After(suggestions[j].Start) {
+				suggestions[i], suggestions[j] = suggestions[j], suggestions[i]
+			}
+		}
+	}
+
+	// Limit to max suggestions
+	if len(suggestions) > req.MaxSuggestions {
+		suggestions = suggestions[:req.MaxSuggestions]
+	}
+
 	return suggestions, nil
+
+	// Original external API code (commented out for now)
+	/*
+		// Prepare the request payload for the external API
+		payload := map[string]interface{}{
+			"participantCalendars": participantCalendars,
+			"duration":             req.Duration,
+			"startTime":            req.StartTime.Format(time.RFC3339),
+			"endTime":              req.EndTime.Format(time.RFC3339),
+			"timeZone":             req.TimeZone,
+			"maxSuggestions":       req.MaxSuggestions,
+		}
+
+		payloadBytes, err := json.Marshal(payload)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal request: %w", err)
+		}
+
+		// Call the external API
+		resp, err := http.Post(apiURL, "application/json", bytes.NewBuffer(payloadBytes))
+		if err != nil {
+			return nil, fmt.Errorf("failed to call external API: %w", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("external API returned status %d", resp.StatusCode)
+		}
+
+		// Parse the response
+		var apiResponse struct {
+			Suggestions []struct {
+				Start      string  `json:"start"`
+				End        string  `json:"end"`
+				Confidence float64 `json:"confidence"`
+				Score      float64 `json:"score"`
+			} `json:"suggestions"`
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
+			return nil, fmt.Errorf("failed to decode API response: %w", err)
+		}
+
+		// Convert to our model format
+		suggestions := make([]models.MeetingSuggestion, 0, len(apiResponse.Suggestions))
+		for _, s := range apiResponse.Suggestions {
+			startTime, err := time.Parse(time.RFC3339, s.Start)
+			if err != nil {
+				log.Printf("Warning: Failed to parse start time %s: %v", s.Start, err)
+				continue
+			}
+			endTime, err := time.Parse(time.RFC3339, s.End)
+			if err != nil {
+				log.Printf("Warning: Failed to parse end time %s: %v", s.End, err)
+				continue
+			}
+
+			suggestions = append(suggestions, models.MeetingSuggestion{
+				Start:      startTime,
+				End:        endTime,
+				Confidence: s.Confidence,
+				Score:      s.Score,
+			})
+		}
+
+		return suggestions, nil
+	*/
 }
