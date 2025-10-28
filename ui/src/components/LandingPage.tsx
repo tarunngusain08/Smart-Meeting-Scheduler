@@ -26,7 +26,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
     // Redirect after animation starts
     setTimeout(() => {
       const redirectUri = encodeURIComponent(window.location.origin + '/auth/callback');
-      window.location.href = `http://localhost:8080/auth/login?redirect_uri=${redirectUri}`;
+      window.location.href = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080'}/auth/login?redirect_uri=${redirectUri}`;
     }, 600);
   };
 
