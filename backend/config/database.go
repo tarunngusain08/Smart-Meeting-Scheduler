@@ -3,6 +3,8 @@ package config
 import (
 	"database/sql"
 	"fmt"
+	"os"
+	"strconv"
 
 	_ "github.com/lib/pq"
 )
@@ -15,13 +17,27 @@ type DBConfig struct {
 	DBName   string
 }
 
+func defaultEnv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
+
 func NewDBConfig() *DBConfig {
+	port := 5432
+	if portStr := os.Getenv("DB_PORT"); portStr != "" {
+		if p, err := strconv.Atoi(portStr); err == nil {
+			port = p
+		}
+	}
+
 	return &DBConfig{
-		Host:     "localhost",
-		Port:     5432,
-		User:     "scheduler",
-		Password: "scheduler",
-		DBName:   "meeting_scheduler",
+		Host:     defaultEnv("DB_HOST", "localhost"),
+		Port:     port,
+		User:     defaultEnv("DB_USER", "scheduler"),
+		Password: defaultEnv("DB_PASSWORD", "scheduler"),
+		DBName:   defaultEnv("DB_NAME", "meeting_scheduler"),
 	}
 }
 
