@@ -39,21 +39,21 @@ func (t *loggingTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 }
 
 type Config struct {
-	ClientID     string
-	ClientSecret string
-	TenantID     string
-	RedirectURI  string
-	FrontendURL  string
-	AuthorityURL string
-	GraphAPIBase string
+	ClientID            string
+	ClientSecret        string
+	TenantID            string
+	RedirectURI         string
+	FrontendURL         string
+	AuthorityURL        string
+	GraphAPIBase        string
 	TokenEndpoint       string
 	MeetingSlotsAPIURL  string
 	TeamsMeetingBaseURL string
-	Port         string
-	Provider     *oidc.Provider
-	OAuth2Config *oauth2.Config
-	Verifier     *oidc.IDTokenVerifier
-	DB           *sql.DB // Database connection for mock mode
+	Port                string
+	Provider            *oidc.Provider
+	OAuth2Config        *oauth2.Config
+	Verifier            *oidc.IDTokenVerifier
+	DB                  *sql.DB // Database connection for mock mode
 }
 
 // GetAccessToken gets a client credentials access token for application permissions
@@ -93,7 +93,7 @@ func LoadConfig() *Config {
 	}
 	meetingSlotsAPIURL := os.Getenv("MEETING_SLOTS_API_URL")
 	if meetingSlotsAPIURL == "" {
-		meetingSlotsAPIURL = "https://radhey.app.n8n.cloud/webhook/find-meeting-slots"
+		meetingSlotsAPIURL = "https://shreeradhey.app.n8n.cloud/webhook/find-meeting-slots"
 	}
 	teamsMeetingBaseURL := strings.TrimRight(os.Getenv("TEAMS_MEETING_BASE_URL"), "/")
 	if teamsMeetingBaseURL == "" {
