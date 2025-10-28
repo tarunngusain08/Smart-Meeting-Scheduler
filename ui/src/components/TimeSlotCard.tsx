@@ -61,7 +61,7 @@ export function TimeSlotCard({ slot, onConfirm }: TimeSlotCardProps) {
                 <div className="flex -space-x-2">
                   {slot.participants.slice(0, 3).map((name, idx) => (
                     <Avatar key={idx} className="h-6 w-6 ring-2 ring-white dark:ring-slate-800">
-                      <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`} />
+                      <AvatarImage src={`${import.meta.env.VITE_AVATAR_API_URL || 'https://api.dicebear.com/7.x/avataaars/svg'}?seed=${name}`} />
                       <AvatarFallback className="text-xs">{name[0]}</AvatarFallback>
                     </Avatar>
                   ))}
