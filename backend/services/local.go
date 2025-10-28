@@ -48,8 +48,8 @@ func (m *MockGraphClient) GetCalendarView(userIdentifier string, startTime, endT
 		SELECT id, subject, start_time, end_time, organizer, location, is_online, online_url
 		FROM mock_events
 		WHERE organizer = $1
-		  AND start_time >= $2
-		  AND end_time <= $3
+		  AND start_time < $3
+		  AND end_time > $2
 		ORDER BY start_time ASC
 	`
 
@@ -103,8 +103,8 @@ func (m *MockGraphClient) GetUserEvents(userEmail string, startTime, endTime tim
 		FROM mock_events e
 		LEFT JOIN mock_event_attendees ea ON e.id = ea.event_id
 		WHERE (e.organizer = $1 OR ea.attendee_email = $1)
-		  AND e.start_time >= $2 
-		  AND e.end_time <= $3
+		  AND e.start_time < $3
+		  AND e.end_time > $2
 		ORDER BY e.start_time ASC
 	`
 
