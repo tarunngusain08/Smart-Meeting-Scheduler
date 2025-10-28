@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,7 +27,8 @@ func GetAccessTokenFromContext(c *gin.Context) string {
 }
 
 func GetUserProfile(token string) ([]byte, error) {
-	req, err := http.NewRequest("GET", "https://graph.microsoft.com/v1.0/me", nil)
+	baseURL := graphAPIBaseURL()
+	req, err := http.NewRequest("GET", baseURL+"/me", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
@@ -46,7 +49,8 @@ func GetUserProfile(token string) ([]byte, error) {
 }
 
 func GetUserCalendar(token string) ([]byte, error) {
-	req, _ := http.NewRequest("GET", "https://graph.microsoft.com/v1.0/me/calendar/events", nil)
+	baseURL := graphAPIBaseURL()
+	req, _ := http.NewRequest("GET", baseURL+"/me/calendar/events", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -54,4 +58,12 @@ func GetUserCalendar(token string) ([]byte, error) {
 	}
 	defer res.Body.Close()
 	return io.ReadAll(res.Body)
+}
+
+func graphAPIBaseURL() string {
+	base := strings.TrimRight(os.Getenv("GRAPH_API_BASE"), "/")
+	if base == "" {
+		base = "https://graph.microsoft.com/v1.0"
+	}
+	return base
 }
