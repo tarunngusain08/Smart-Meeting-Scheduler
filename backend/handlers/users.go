@@ -131,3 +131,30 @@ func GetAllUsers(cfg *config.Config) gin.HandlerFunc {
 		c.JSON(http.StatusOK, users)
 	}
 }
+
+// GetCurrentUser retrieves the current authenticated user's information from database
+func GetCurrentUser(cfg *config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get the user ID from the session (this should be set by the auth middleware)
+		userID := c.GetString("user_id")
+		
+		// For testing without auth, use a test user ID
+		if userID == "" {
+			userID = "0bcef1ba-a180-4211-9ab7-18139716434f" // Tarun's user ID for testing
+		}
+
+		if err := initUserStore(cfg); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initialize database"})
+			return
+		}
+
+		user, err := userStore.GetUserByID(userID)
+		if err != nil {
+			log.Printf("Failed to fetch current user %s: %v", userID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user information"})
+			return
+		}
+
+		c.JSON(http.StatusOK, user)
+	}
+}
