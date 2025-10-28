@@ -80,7 +80,11 @@ func refreshSession(session models.Session) (models.Session, error) {
 	data.Set("grant_type", "refresh_token")
 	data.Set("scope", "openid profile email offline_access User.Read Calendars.Read")
 
-	req, err := http.NewRequest("POST", "https://login.microsoftonline.com/common/oauth2/v2.0/token", strings.NewReader(data.Encode()))
+	tokenEndpoint := os.Getenv("OAUTH_TOKEN_ENDPOINT")
+	if tokenEndpoint == "" {
+		tokenEndpoint = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+	}
+	req, err := http.NewRequest("POST", tokenEndpoint, strings.NewReader(data.Encode()))
 	if err != nil {
 		return models.Session{}, err
 	}
