@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"io"
 	"log"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/coreos/go-oidc"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/microsoft"
 )
@@ -44,10 +46,14 @@ type Config struct {
 	FrontendURL  string
 	AuthorityURL string
 	GraphAPIBase string
+	TokenEndpoint       string
+	MeetingSlotsAPIURL  string
+	TeamsMeetingBaseURL string
 	Port         string
 	Provider     *oidc.Provider
 	OAuth2Config *oauth2.Config
 	Verifier     *oidc.IDTokenVerifier
+	DB           *sql.DB // Database connection for mock mode
 }
 
 // GetAccessToken gets a client credentials access token for application permissions
@@ -77,7 +83,22 @@ func LoadConfig() *Config {
 	redirectURI := os.Getenv("REDIRECT_URI")
 	frontendURL := os.Getenv("FRONTEND_URL")
 	authorityURL := strings.TrimRight(os.Getenv("AUTHORITY_URL"), "/")
-	graphAPIBase := os.Getenv("GRAPH_API_BASE")
+	graphAPIBase := strings.TrimRight(os.Getenv("GRAPH_API_BASE"), "/")
+	if graphAPIBase == "" {
+		graphAPIBase = "https://graph.microsoft.com/v1.0"
+	}
+	tokenEndpoint := os.Getenv("OAUTH_TOKEN_ENDPOINT")
+	if tokenEndpoint == "" {
+		tokenEndpoint = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+	}
+	meetingSlotsAPIURL := os.Getenv("MEETING_SLOTS_API_URL")
+	if meetingSlotsAPIURL == "" {
+		meetingSlotsAPIURL = "https://radhey.app.n8n.cloud/webhook/find-meeting-slots"
+	}
+	teamsMeetingBaseURL := strings.TrimRight(os.Getenv("TEAMS_MEETING_BASE_URL"), "/")
+	if teamsMeetingBaseURL == "" {
+		teamsMeetingBaseURL = "https://teams.microsoft.com/l/meetup-join/mock"
+	}
 	port := os.Getenv("PORT")
 
 	issuerURL := fmt.Sprintf("%s/%s/v2.0", authorityURL, tenantID)
@@ -120,17 +141,37 @@ func LoadConfig() *Config {
 		Scopes:       []string{"openid", "profile", "email", "offline_access", "User.Read", "User.ReadBasic.All", "Calendars.Read"},
 	}
 
+	// Initialize database connection for mock mode
+	var db *sql.DB
+	graphMode := os.Getenv("GRAPH_MODE")
+	if graphMode == "mock" {
+		log.Println("Initializing database connection for mock mode...")
+		dbConfig := NewDBConfig()
+		var err error
+		db, err = dbConfig.ConnectDB()
+		if err != nil {
+			log.Printf("WARNING: Failed to connect to database for mock mode: %v", err)
+			log.Println("Mock mode will not work without database. Please start PostgreSQL.")
+		} else {
+			log.Println("Database connection established successfully for mock mode")
+		}
+	}
+
 	return &Config{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		TenantID:     tenantID,
-		RedirectURI:  redirectURI,
-		FrontendURL:  frontendURL,
-		AuthorityURL: authorityURL,
-		GraphAPIBase: graphAPIBase,
-		Port:         port,
-		Provider:     provider,
-		OAuth2Config: oauth2Config,
-		Verifier:     verifier,
+		ClientID:            clientID,
+		ClientSecret:        clientSecret,
+		TenantID:            tenantID,
+		RedirectURI:         redirectURI,
+		FrontendURL:         frontendURL,
+		AuthorityURL:        authorityURL,
+		GraphAPIBase:        graphAPIBase,
+		TokenEndpoint:       tokenEndpoint,
+		MeetingSlotsAPIURL:  meetingSlotsAPIURL,
+		TeamsMeetingBaseURL: teamsMeetingBaseURL,
+		Port:                port,
+		Provider:            provider,
+		OAuth2Config:        oauth2Config,
+		Verifier:            verifier,
+		DB:                  db,
 	}
 }
