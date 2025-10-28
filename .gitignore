@@ -16,3 +16,4 @@ node_modules/
 .DS_Store
 backend/.env
 backend/.env
+backend/Smart-Meeting-Scheduler
