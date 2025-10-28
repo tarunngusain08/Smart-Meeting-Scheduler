@@ -12,9 +12,21 @@ interface SidebarProps {
   nextMeeting: any;
 }
 
+// Helper function to get timezone display name
+const getTimezoneDisplayName = (timezone: string): string => {
+  const timezoneMap: Record<string, string> = {
+    'America/Los_Angeles': 'Pacific Time (PT)',
+    'America/New_York': 'Eastern Time (ET)',
+    'Europe/London': 'Greenwich Mean Time (GMT)',
+    'Asia/Kolkata': 'India Standard Time (IST)',
+    'Asia/Seoul': 'Korea Standard Time (KST)',
+  };
+  return timezoneMap[timezone] || timezone;
+};
 
 export function Sidebar({ selectedParticipants, nextMeeting }: SidebarProps) {
   const [availableParticipants, setAvailableParticipants] = useState<Participant[]>([]);
+  const [currentUserTimezone, setCurrentUserTimezone] = useState<string>('Pacific Time (PT)');
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -27,7 +39,22 @@ export function Sidebar({ selectedParticipants, nextMeeting }: SidebarProps) {
       }
     };
 
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await fetch('/graph/user/current');
+        if (response.ok) {
+          const user = await response.json();
+          if (user.timezone) {
+            setCurrentUserTimezone(getTimezoneDisplayName(user.timezone));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch current user:', error);
+      }
+    };
+
     fetchUsers();
+    fetchCurrentUser();
   }, []);
 
   const selected = availableParticipants.filter((p) => selectedParticipants.includes(p.name));
@@ -178,11 +205,11 @@ export function Sidebar({ selectedParticipants, nextMeeting }: SidebarProps) {
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-sm text-slate-600 dark:text-slate-400">Your timezone:</span>
-              <Badge variant="secondary">Pacific Time (PT)</Badge>
+              <Badge variant="secondary">{currentUserTimezone}</Badge>
             </div>
             <Separator />
             <div className="text-xs text-slate-500 dark:text-slate-400">
-              All times shown in PT. Participants in other time zones will see adjusted times.
+              All times shown in {currentUserTimezone.split(' ')[0].toLowerCase()}. Participants in other time zones will see adjusted times.
             </div>
           </div>
         </CardContent>
