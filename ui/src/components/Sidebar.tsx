@@ -1,24 +1,35 @@
+import { useState, useEffect } from 'react';
 import { Users, Calendar, Globe, Clock, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { ScrollArea } from './ui/scroll-area';
+import { getAllUsers, userToParticipant, Participant } from '../api/users';
 
 interface SidebarProps {
   selectedParticipants: string[];
   nextMeeting: any;
 }
 
-const availableParticipants = [
-  { id: '1', name: 'Sarah Johnson', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah', role: 'Product Manager', timezone: 'PST', status: 'available' },
-  { id: '2', name: 'Mike Chen', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike', role: 'Designer', timezone: 'EST', status: 'busy' },
-  { id: '3', name: 'Alex Rivera', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex', role: 'Engineer', timezone: 'PST', status: 'available' },
-  { id: '4', name: 'Emma Davis', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emma', role: 'Marketing', timezone: 'CST', status: 'available' },
-  { id: '5', name: 'James Wilson', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=James', role: 'Sales', timezone: 'EST', status: 'away' },
-];
 
 export function Sidebar({ selectedParticipants, nextMeeting }: SidebarProps) {
+  const [availableParticipants, setAvailableParticipants] = useState<Participant[]>([]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const users = await getAllUsers();
+        const participants = users.map(userToParticipant);
+        setAvailableParticipants(participants);
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
   const selected = availableParticipants.filter((p) => selectedParticipants.includes(p.name));
 
   return (
@@ -102,7 +113,7 @@ export function Sidebar({ selectedParticipants, nextMeeting }: SidebarProps) {
               <div className="flex -space-x-2">
                 {nextMeeting.participants.map((name: string, idx: number) => (
                   <Avatar key={idx} className="h-8 w-8 ring-2 ring-white dark:ring-slate-900">
-                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`} />
+                  <AvatarImage src={`${import.meta.env.VITE_AVATAR_API_URL || 'https://api.dicebear.com/7.x/avataaars/svg'}?seed=${name}`} />
                     <AvatarFallback className="text-xs">{name[0]}</AvatarFallback>
                   </Avatar>
                 ))}
