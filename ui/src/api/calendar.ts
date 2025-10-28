@@ -1,5 +1,7 @@
 import { addDays, startOfDay, endOfDay } from 'date-fns';
 
+const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+
 export interface CalendarEvent {
   id: string;
   subject: string;
@@ -39,7 +41,7 @@ export interface AvailabilityResponse {
 }
 
 export async function fetchCalendarEvents(days: number = 7): Promise<CalendarEvent[]> {
-  const response = await fetch(`http://localhost:8080/api/calendar/events?days=${days}`, {
+  const response = await fetch(`${API_BASE}/api/calendar/events?days=${days}`, {
     credentials: 'include',
   });
   if (!response.ok) {
@@ -72,7 +74,7 @@ export interface AvailabilityRequest {
 }
 
 export async function scheduleMeeting(request: MeetingRequest): Promise<CalendarEvent> {
-  const response = await fetch('http://localhost:8080/api/calendar/schedule', {
+  const response = await fetch(`${API_BASE}/api/calendar/schedule`, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -95,7 +97,7 @@ export async function scheduleMeeting(request: MeetingRequest): Promise<Calendar
 }
 
 export async function checkAvailability(request: AvailabilityRequest): Promise<AvailabilityResponse> {
-  const response = await fetch('http://localhost:8080/api/calendar/availability', {
+  const response = await fetch(`${API_BASE}/api/calendar/availability`, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -134,7 +136,7 @@ export async function checkAvailabilityLegacy(
   const startTime = startOfDay(new Date());
   const endTime = endOfDay(addDays(startTime, days));
   
-  const response = await fetch('http://localhost:8080/api/calendar/availability', {
+  const response = await fetch(`${API_BASE}/api/calendar/availability`, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -180,7 +182,7 @@ export interface User {
 }
 
 export async function searchUsers(query: string): Promise<User[]> {
-  const response = await fetch(`http://localhost:8080/graph/users/search?q=${encodeURIComponent(query)}`, {
+  const response = await fetch(`${API_BASE}/graph/users/search?q=${encodeURIComponent(query)}`, {
     credentials: 'include',
   });
   
@@ -214,7 +216,7 @@ interface CreateMeetingResponse {
 }
 
 export async function createMeeting(request: CreateMeetingRequest): Promise<CreateMeetingResponse> {
-  const response = await fetch('http://localhost:8080/api/calendar/meetings', {
+  const response = await fetch(`${API_BASE}/api/calendar/meetings`, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -228,4 +230,56 @@ export async function createMeeting(request: CreateMeetingRequest): Promise<Crea
   }
 
   return response.json();
+}
+
+export interface QuickAvailabilityRequest {
+  timeRange: 'today' | 'tomorrow' | 'next-week' | 'this-week';
+  attendees?: string[];
+}
+
+export interface QuickAvailabilityResponse {
+  timeRange: string;
+  availableSlots: Array<{
+    start: Date;
+    end: Date;
+    score?: number;
+    attendees?: string[];
+  }>;
+  busySlots: Array<{
+    start: Date;
+    end: Date;
+    subject?: string;
+  }>;
+  summary: string;
+}
+
+export async function checkQuickAvailability(request: QuickAvailabilityRequest): Promise<QuickAvailabilityResponse> {
+  const response = await fetch(`${API_BASE}/api/calendar/quick-availability`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to check availability');
+  }
+
+  const data = await response.json();
+  return {
+    ...data,
+    availableSlots: data.availableSlots?.map((slot: any) => ({
+      ...slot,
+      start: new Date(slot.start),
+      end: new Date(slot.end),
+    })) || [],
+    busySlots: data.busySlots?.map((slot: any) => ({
+      ...slot,
+      start: new Date(slot.start),
+      end: new Date(slot.end),
+    })) || [],
+  };
 }
