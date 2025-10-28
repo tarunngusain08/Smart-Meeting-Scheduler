@@ -18,6 +18,7 @@ type MSUser struct {
 	LastSynced time.Time       `json:"lastSynced" db:"last_synced"`
 	IsRemoved  bool            `json:"-"`        // Indicates if user was removed
 	RawJSON    json.RawMessage `json:"-" db:"-"` // Store raw JSON for future fields
+	TimeZone   string          `json:"timezone" db:"timezone"`
 }
 
 // UnmarshalJSON implements custom JSON unmarshaling to handle @removed field
@@ -55,15 +56,16 @@ func (s *UserStore) GetDB() *sql.DB {
 // UpsertUser updates or inserts a single user within a transaction
 func (s *UserStore) UpsertUser(tx *sql.Tx, user MSUser) error {
 	_, err := tx.Exec(`
-		INSERT INTO users (id, display_name, email, user_principal_name, last_synced, raw_json)
-		VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5)
+		INSERT INTO users (id, display_name, email, user_principal_name, last_synced, raw_json, timezone)
+		VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5, $6)
 		ON CONFLICT (id) DO UPDATE SET
 			display_name = EXCLUDED.display_name,
 			email = EXCLUDED.email,
 			user_principal_name = EXCLUDED.user_principal_name,
 			last_synced = CURRENT_TIMESTAMP,
-			raw_json = EXCLUDED.raw_json
-	`, user.ID, user.DisplayName, user.Email, user.UserPrincipalName, user.RawJSON)
+			raw_json = EXCLUDED.raw_json,
+			timezone = EXCLUDED.timezone
+	`, user.ID, user.DisplayName, user.Email, user.UserPrincipalName, user.RawJSON, user.TimeZone)
 	return err
 }
 
@@ -98,6 +100,7 @@ func (s *UserStore) SearchUsers(query string) ([]MSUser, error) {
 				email, 
 				user_principal_name, 
 				last_synced,
+				timezone,
 				CASE
 					-- Highest priority: Starts with match in display name or email
 					WHEN display_name ILIKE $1 OR email ILIKE $1 THEN 1
@@ -126,7 +129,8 @@ func (s *UserStore) SearchUsers(query string) ([]MSUser, error) {
 			display_name, 
 			email, 
 			user_principal_name, 
-			last_synced
+			last_synced,
+			timezone
 		FROM RankedUsers
 		ORDER BY 
 			match_rank,
@@ -142,7 +146,7 @@ func (s *UserStore) SearchUsers(query string) ([]MSUser, error) {
 	var users []MSUser
 	for rows.Next() {
 		var user MSUser
-		err := rows.Scan(&user.ID, &user.DisplayName, &user.Email, &user.UserPrincipalName, &user.LastSynced)
+		err := rows.Scan(&user.ID, &user.DisplayName, &user.Email, &user.UserPrincipalName, &user.LastSynced, &user.TimeZone)
 		if err != nil {
 			return nil, err
 		}
@@ -160,7 +164,8 @@ func (s *UserStore) GetAllUsers() ([]MSUser, error) {
 			display_name, 
 			email, 
 			user_principal_name, 
-			last_synced
+			last_synced,
+			timezone
 		FROM users
 		ORDER BY display_name ASC
 	`)
@@ -173,7 +178,7 @@ func (s *UserStore) GetAllUsers() ([]MSUser, error) {
 	var users []MSUser
 	for rows.Next() {
 		var user MSUser
-		err := rows.Scan(&user.ID, &user.DisplayName, &user.Email, &user.UserPrincipalName, &user.LastSynced)
+		err := rows.Scan(&user.ID, &user.DisplayName, &user.Email, &user.UserPrincipalName, &user.LastSynced, &user.TimeZone)
 		if err != nil {
 			return nil, err
 		}
@@ -181,4 +186,27 @@ func (s *UserStore) GetAllUsers() ([]MSUser, error) {
 	}
 
 	return users, nil
+}
+
+// GetUserByID retrieves a specific user by their ID
+func (s *UserStore) GetUserByID(userID string) (*MSUser, error) {
+	row := s.db.QueryRow(`
+		SELECT 
+			id, 
+			display_name, 
+			email, 
+			user_principal_name, 
+			last_synced,
+			timezone
+		FROM users
+		WHERE id = $1
+	`, userID)
+
+	var user MSUser
+	err := row.Scan(&user.ID, &user.DisplayName, &user.Email, &user.UserPrincipalName, &user.LastSynced, &user.TimeZone)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
 }
