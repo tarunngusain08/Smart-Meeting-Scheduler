@@ -86,7 +86,7 @@ export default function App() {
       overlay.remove();
       
       // Call backend logout endpoint
-      fetch('http://localhost:8080/auth/logout', {
+      fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080'}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       }).catch(err => console.error('Logout error:', err));
