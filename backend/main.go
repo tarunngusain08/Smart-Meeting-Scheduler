@@ -64,5 +64,8 @@ func main() {
 	api.POST("/calendar/meetings", handlers.CreateMeeting(cfg))
 	api.POST("/calendar/findTimes", handlers.FindMeetingTimes(cfg))
 
+	// Test endpoint without authentication
+	r.POST("/api/test/findTimes", handlers.FindMeetingTimes(cfg))
+
 	r.Run(":" + cfg.Port)
 }
