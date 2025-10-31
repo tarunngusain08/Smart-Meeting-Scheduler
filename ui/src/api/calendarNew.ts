@@ -54,12 +54,12 @@ export interface CreateMeetingRequest {
 }
 
 export interface FindMeetingTimesRequest {
-  attendees: string[];
-  duration: number; // in minutes
-  startTime: string; // ISO 8601
-  endTime: string; // ISO 8601
-  timeZone?: string;
-  maxSuggestions?: number;
+  Attendees: string[];
+  Duration: number; // in minutes
+  StartTime: string; // ISO 8601
+  EndTime: string; // ISO 8601
+  TimeZone?: string;
+  MaxSuggestions?: number;
 }
 
 export interface MeetingTimesResponse {
@@ -251,11 +251,11 @@ export async function checkQuickAvailability(
   let suggestions: MeetingSuggestion[] | undefined;
   if (attendees && attendees.length > 0) {
     const meetingTimesResponse = await findMeetingTimes({
-      attendees,
-      duration: 60, // Default 1 hour
-      startTime: startTime.toISOString(),
-      endTime: endTime.toISOString(),
-      maxSuggestions: 5,
+      Attendees: attendees,
+      Duration: 60, // Default 1 hour
+      StartTime: startTime.toISOString(),
+      EndTime: endTime.toISOString(),
+      MaxSuggestions: 5,
     }, email);
     suggestions = meetingTimesResponse.suggestions;
   }
@@ -284,11 +284,11 @@ export async function smartScheduleMeeting(
 ): Promise<{ message: string; event: Event; suggestions?: MeetingSuggestion[] }> {
   // First, find available meeting times
   const meetingTimesResponse = await findMeetingTimes({
-    attendees,
-    duration,
-    startTime: preferredTimeRange.start.toISOString(),
-    endTime: preferredTimeRange.end.toISOString(),
-    maxSuggestions: 5,
+    Attendees: attendees,
+    Duration: duration,
+    StartTime: preferredTimeRange.start.toISOString(),
+    EndTime: preferredTimeRange.end.toISOString(),
+    MaxSuggestions: 5,
   }, organizer);
 
   // If we have suggestions, use the first one (highest confidence)
