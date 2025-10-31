@@ -14,6 +14,35 @@ node_modules/
 
 # OS files
 .DS_Store
-backend/.env
+
+# Backend specific
 backend/.env
 backend/Smart-Meeting-Scheduler
+backend/*.exe
+backend/*.bin
+backend/*.so
+backend/*.dylib
+
+# Large binary files
+*.exe
+*.bin
+*.so
+*.dylib
+*.dll
+*.app
+
+# Python virtual environments
+venv/
+env/
+__pycache__/
+*.pyc
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
