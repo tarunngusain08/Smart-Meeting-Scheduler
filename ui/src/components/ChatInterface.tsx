@@ -122,11 +122,11 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
       const endTime = endDate || addDays(startTime, 7);
       
       const response = await findMeetingTimes({
-        attendees: participants,
-        duration: duration || 60,
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
-        maxSuggestions: 5,
+        Attendees: participants,
+        Duration: duration || 60,
+        StartTime: startTime.toISOString(),
+        EndTime: endTime.toISOString(),
+        MaxSuggestions: 5,
       });
 
       if (response.suggestions.length > 0) {
