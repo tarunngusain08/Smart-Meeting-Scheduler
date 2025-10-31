@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { motion } from 'motion/react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface TimeSlotCardProps {
   slot: {
@@ -83,8 +83,9 @@ export function TimeSlotCard({ slot, onConfirm }: TimeSlotCardProps) {
             <div className="flex flex-col gap-2">
               <Button
                 size="sm"
+                variant="outline"
                 onClick={() => onConfirm(slot)}
-                className="bg-gradient-to-br from-[#4A8456] to-[#3D7047] hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md"
+                className="border-2 border-emerald-600 dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-semibold transition-all"
               >
                 <CheckCircle2 className="h-4 w-4 mr-1" />
                 Confirm
