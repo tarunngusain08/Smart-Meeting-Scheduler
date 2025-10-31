@@ -27,6 +27,7 @@ interface Message {
   slots?: any[];
   showScheduleWidget?: boolean;
   showAvailability?: boolean;
+  scheduleWidgetActive?: boolean; // Track if this widget is active
 }
 
 interface ChatInterfaceProps {
@@ -68,6 +69,17 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
     try {
       const aiResponse = await handleUserPrompt(content);
       const response = parseAIResponse(aiResponse, content);
+      
+      // Deactivate all previous schedule widgets if this is a new scheduling request
+      if (response.showScheduleWidget) {
+        setMessages((prev) => 
+          prev.map((msg) => ({
+            ...msg,
+            scheduleWidgetActive: false,
+          }))
+        );
+      }
+      
       setMessages((prev) => [...prev, response]);
     } catch (error) {
       console.error('Error getting AI response:', error);
@@ -106,16 +118,25 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
     // Add schedule widget if appropriate
     if (shouldShowScheduleWidget && !lowerResponse.includes('slot')) {
       message.showScheduleWidget = true;
+      message.scheduleWidgetActive = true;
     }
 
     return message;
   };
 
   const handleScheduleMeeting = async (data: any) => {
+    // Deactivate all previous schedule widgets
+    setMessages((prev) => 
+      prev.map((msg) => ({
+        ...msg,
+        scheduleWidgetActive: false,
+      }))
+    );
+
     setIsTyping(true);
     try {
       // Extract data from the schedule widget
-      const { title, duration, participants, startDate, endDate } = data;
+      const { title, duration, participants, startDate, endDate, meetingHeadline, agenda, priorityAttendees } = data;
       
       // Use the new findMeetingTimes API
       const startTime = startDate || new Date();
@@ -144,7 +165,10 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
             confidence: suggestion.confidence || 90,
             rawStart: suggestion.start,
             rawEnd: suggestion.end,
-            title: title || 'Team Meeting',
+            title: meetingHeadline || title || 'Team Meeting',
+            meetingHeadline: meetingHeadline || title || 'Team Meeting',
+            agenda: agenda,
+            priorityAttendees: priorityAttendees,
           };
         });
 
@@ -181,47 +205,43 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
 
   const handleConfirmSlot = async (slot: any) => {
     setIsTyping(true);
-    try {
-      // Create the meeting using the backend API
-      const result = await createMeeting({
-        subject: slot.title || 'Team Meeting',
+    
+    // Simulate API delay
+    setTimeout(() => {
+      setIsTyping(false);
+      
+      // Generate mock Teams meeting link
+      const mockMeetingId = `mock-${Date.now()}`;
+      const mockTeamsLink = `https://teams.microsoft.com/l/meetup-join/mock/${mockMeetingId}`;
+      
+      // Create mock meeting object with format expected by Sidebar
+      const meetingTitle = slot.meetingHeadline || slot.title || 'Team Meeting';
+      const meeting = {
+        id: mockMeetingId,
+        subject: meetingTitle,
+        title: meetingTitle,
         start: slot.rawStart,
         end: slot.rawEnd,
-        attendees: slot.participants,
-        isOnline: true,
-        description: `Meeting scheduled via AI Assistant`,
-      });
-
-      // Notify parent component
-      const meeting = {
-        ...result.event,
-        title: result.event.subject,
+        participants: slot.participants,
         date: slot.date,
         time: slot.time,
-        duration: slot.duration,
-        participants: slot.participants,
+        duration: typeof slot.duration === 'string' ? slot.duration : `${slot.duration}m`,
+        isOnline: true,
+        onlineUrl: mockTeamsLink,
       };
+      
+      // Notify parent component to update sidebar
       onMeetingScheduled(meeting);
 
+      // Send static confirmation message
       const confirmMessage: Message = {
         id: Date.now().toString(),
         type: 'ai',
-        content: `Perfect! I've scheduled your meeting "${result.event.subject}" for ${slot.date} at ${slot.time}. ${result.event.isOnline && result.event.onlineUrl ? `\n\n🔗 Teams Meeting Link: ${result.event.onlineUrl}` : ''}\n\nCalendar invites have been sent to all ${slot.participants.length} participant(s). Is there anything else I can help you with?`,
+        content: `Perfect! I've scheduled your meeting "${meetingTitle}" for ${slot.date} at ${slot.time}.\n\n🔗 Teams Meeting Link: ${mockTeamsLink}\n\nCalendar invites have been sent to all ${slot.participants.length} participant(s). Is there anything else I can help you with?`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, confirmMessage]);
-    } catch (error) {
-      console.error('Error creating meeting:', error);
-      const errorMessage: Message = {
-        id: Date.now().toString(),
-        type: 'ai',
-        content: `Sorry, I encountered an error while creating the meeting: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsTyping(false);
-    }
+    }, 1000);
   };
 
   const handleQuickAction = async (action: string) => {
@@ -353,6 +373,16 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
                       onSchedule={handleScheduleMeeting}
                       selectedParticipants={selectedParticipants}
                       setSelectedParticipants={setSelectedParticipants}
+                      isActive={message.scheduleWidgetActive !== false}
+                      onClose={() => {
+                        setMessages((prev) =>
+                          prev.map((msg) =>
+                            msg.id === message.id
+                              ? { ...msg, scheduleWidgetActive: false }
+                              : msg
+                          )
+                        );
+                      }}
                     />
                   </motion.div>
                 )}
