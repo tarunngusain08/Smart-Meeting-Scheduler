@@ -59,14 +59,48 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
 
   const handleFindSlot = () => {
     if (selectedParticipants.length === 0) return;
-    
+
+    // Calculate startTime and endTime based on dateRange
+    const now = new Date();
+    let startTime: Date;
+    let endTime: Date;
+
+    switch (dateRange) {
+      case 'today':
+        // Today from 00:00 to 23:59
+        startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        break;
+
+      case 'this-week':
+        // From now to 7 days from now (default behavior)
+        startTime = new Date(now);
+        endTime = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        break;
+
+      case 'next-week':
+        // Next Monday to following Sunday
+        const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const daysUntilNextMonday = currentDay === 0 ? 1 : (8 - currentDay); // If Sunday, next Monday is tomorrow
+        startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntilNextMonday, 0, 0, 0, 0);
+        endTime = new Date(startTime.getTime() + 6 * 24 * 60 * 60 * 1000 + 23 * 60 * 60 * 1000 + 59 * 60 * 1000 + 59 * 1000);
+        break;
+
+      default:
+        // Default to this-week
+        startTime = new Date(now);
+        endTime = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    }
+
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
       onSchedule({
         participants: selectedParticipants,
-        dateRange,
         duration,
+        startDate: startTime,
+        endDate: endTime,
+        maxSuggestions: 5,
       });
     }, 2000);
   };
