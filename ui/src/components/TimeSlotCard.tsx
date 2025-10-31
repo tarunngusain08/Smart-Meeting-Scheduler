@@ -15,6 +15,9 @@ interface TimeSlotCardProps {
     participants: string[];
     availability: string;
     confidence: number;
+    meetingHeadline?: string;
+    agenda?: string;
+    priorityAttendees?: string[];
   };
   onConfirm: (slot: any) => void;
 }
@@ -26,6 +29,11 @@ export function TimeSlotCard({ slot, onConfirm }: TimeSlotCardProps) {
 
   const handleAdjust = () => {
     toast.info('Adjusting duration...');
+  };
+
+  const handleConfirmClick = () => {
+    // Directly confirm the meeting with slot data
+    onConfirm(slot);
   };
 
   return (
@@ -84,7 +92,7 @@ export function TimeSlotCard({ slot, onConfirm }: TimeSlotCardProps) {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => onConfirm(slot)}
+                onClick={handleConfirmClick}
                 className="border-2 border-emerald-600 dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-semibold transition-all"
               >
                 <CheckCircle2 className="h-4 w-4 mr-1" />
