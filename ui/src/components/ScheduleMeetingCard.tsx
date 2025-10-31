@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Users, Calendar, Clock, Search, Loader2, AlertCircle } from 'lucide-react';
+import { Users, Calendar, Clock, Search, Loader2, AlertCircle, FileText, Star, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
+import { Label } from './ui/label';
 import { motion } from 'motion/react';
 import { getAllUsers, userToParticipant, Participant } from '../api/users';
 
@@ -12,10 +15,12 @@ interface ScheduleMeetingCardProps {
   onSchedule: (data: any) => void;
   selectedParticipants: string[];
   setSelectedParticipants: (participants: string[]) => void;
+  isActive?: boolean;
+  onClose?: () => void;
 }
 
 
-export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelectedParticipants }: ScheduleMeetingCardProps) {
+export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelectedParticipants, isActive = true, onClose }: ScheduleMeetingCardProps) {
   const [dateRange, setDateRange] = useState('this-week');
   const [duration, setDuration] = useState('1h');
   const [isLoading, setIsLoading] = useState(false);
@@ -24,6 +29,13 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [usersError, setUsersError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // New fields for meeting context
+  const [meetingHeadline, setMeetingHeadline] = useState('');
+  const [agenda, setAgenda] = useState('');
+  const [priorityAttendees, setPriorityAttendees] = useState<string[]>([]);
+  const [showPriorityAttendees, setShowPriorityAttendees] = useState(false);
+  const [prioritySearchQuery, setPrioritySearchQuery] = useState('');
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -57,8 +69,25 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
     p.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const filteredPriorityParticipants = availableParticipants.filter((p) =>
+    p.name.toLowerCase().includes(prioritySearchQuery.toLowerCase()) ||
+    p.email.toLowerCase().includes(prioritySearchQuery.toLowerCase())
+  );
+
+  const togglePriorityAttendee = (name: string) => {
+    if (priorityAttendees.includes(name)) {
+      setPriorityAttendees(priorityAttendees.filter((p) => p !== name));
+    } else {
+      setPriorityAttendees([...priorityAttendees, name]);
+    }
+  };
+
   const handleFindSlot = () => {
     if (selectedParticipants.length === 0) return;
+    if (!meetingHeadline.trim()) {
+      // Show error if headline is missing
+      return;
+    }
 
     // Calculate startTime and endTime based on dateRange
     const now = new Date();
@@ -101,26 +130,76 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
         startDate: startTime,
         endDate: endTime,
         maxSuggestions: 5,
+        meetingHeadline: meetingHeadline.trim(),
+        agenda: agenda.trim() || undefined,
+        priorityAttendees: priorityAttendees.length > 0 ? priorityAttendees : undefined,
       });
     }, 2000);
   };
+
+  if (!isActive) {
+    return null;
+  }
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
     >
       <Card className="border-2 border-emerald-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-xl">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
-            <Calendar className="h-5 w-5 text-[#10B981]" />
-            Schedule a Meeting
-          </CardTitle>
-          <CardDescription className="text-gray-600 dark:text-gray-400">
-            Select participants, date range, and duration to find optimal slots
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+                <Calendar className="h-5 w-5 text-[#10B981]" />
+                Schedule a Meeting
+              </CardTitle>
+              <CardDescription className="text-gray-600 dark:text-gray-400">
+                Select participants, date range, and duration to find optimal slots
+              </CardDescription>
+            </div>
+            {onClose && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-8 w-8 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Meeting Headline - Required */}
+          <div>
+            <Label className="flex items-center gap-2 mb-2 text-gray-900 dark:text-white font-medium">
+              <FileText className="h-4 w-4" />
+              Meeting Headline <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              value={meetingHeadline}
+              onChange={(e) => setMeetingHeadline(e.target.value)}
+              placeholder="e.g., Team Standup, Sprint Planning"
+              className="w-full border-2 border-gray-300/60 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
+              required
+            />
+          </div>
+
+          {/* Agenda/Description - Optional */}
+          <div>
+            <Label className="flex items-center gap-2 mb-2 text-gray-900 dark:text-white font-medium">
+              <FileText className="h-4 w-4" />
+              Agenda/Description <span className="text-gray-500 text-xs">(optional)</span>
+            </Label>
+            <Textarea
+              value={agenda}
+              onChange={(e) => setAgenda(e.target.value)}
+              placeholder="Add meeting agenda, discussion topics, or description..."
+              className="w-full min-h-[80px] resize-none border-2 border-gray-300/60 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
+            />
+          </div>
           {/* Participants */}
           <div>
             <label className="flex items-center gap-2 mb-2 text-gray-900 dark:text-white font-medium">
@@ -207,6 +286,92 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
             </div>
           </div>
 
+          {/* Priority Attendees - Optional */}
+          <div>
+            <Label className="flex items-center gap-2 mb-2 text-gray-900 dark:text-white font-medium">
+              <Star className="h-4 w-4" />
+              Priority Attendees <span className="text-gray-500 text-xs">(optional)</span>
+            </Label>
+            <div className="relative">
+              <Button
+                variant="outline"
+                className="w-full justify-start text-left h-auto min-h-[44px] border-2 border-gray-300/60 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700"
+                onClick={() => setShowPriorityAttendees(!showPriorityAttendees)}
+              >
+                {priorityAttendees.length === 0 ? (
+                  <span className="text-gray-500 dark:text-gray-400">Select priority attendees...</span>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {priorityAttendees.map((name) => (
+                      <Badge key={name} className="!bg-amber-500 !text-white border border-amber-600">
+                        <Star className="h-3 w-3 mr-1" />
+                        {name}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </Button>
+
+              {showPriorityAttendees && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="absolute z-10 w-full mt-2 p-2 rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-2xl"
+                >
+                  <div className="relative mb-2">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search participants..."
+                      value={prioritySearchQuery}
+                      onChange={(e) => setPrioritySearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 rounded-md border-2 border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                    />
+                  </div>
+                  <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                    {isLoadingUsers ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                        <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Loading users...</span>
+                      </div>
+                    ) : usersError ? (
+                      <div className="flex items-center gap-2 p-3 text-red-600 dark:text-red-400">
+                        <AlertCircle className="h-4 w-4" />
+                        <span className="text-sm">{usersError}</span>
+                      </div>
+                    ) : filteredPriorityParticipants.length === 0 ? (
+                      <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
+                        No users found
+                      </div>
+                    ) : (
+                      filteredPriorityParticipants.map((participant) => (
+                        <button
+                          key={participant.id}
+                          onClick={() => togglePriorityAttendee(participant.name)}
+                          className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                        >
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={participant.avatar} />
+                            <AvatarFallback>{participant.name[0]}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 text-left">
+                            <p className="text-gray-900 dark:text-white font-medium">{participant.name}</p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400">{participant.role}</p>
+                          </div>
+                          {priorityAttendees.includes(participant.name) && (
+                            <div className="h-5 w-5 rounded-full bg-amber-500 flex items-center justify-center shadow-md">
+                              <Star className="h-3 w-3 text-white fill-white" />
+                            </div>
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          </div>
+
           {/* Date Range */}
           <div>
             <label className="flex items-center gap-2 mb-2 text-gray-900 dark:text-white font-medium">
@@ -253,7 +418,7 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
           {/* Submit Button */}
           <Button
             onClick={handleFindSlot}
-            disabled={selectedParticipants.length === 0 || isLoading}
+            disabled={selectedParticipants.length === 0 || isLoading || !meetingHeadline.trim()}
             className="w-full bg-[#10B981] hover:bg-[#059669] text-white shadow-xl shadow-emerald-500/50 disabled:opacity-50 transition-all"
           >
             {isLoading ? (
