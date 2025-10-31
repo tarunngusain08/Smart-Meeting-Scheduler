@@ -15,7 +15,12 @@ export interface Participant extends User {
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
-export async function getAllUsers(): Promise<User[]> {
+export interface MSUser extends User {
+	timezone?: string;
+	lastSynced?: string;
+}
+
+export async function getAllUsers(): Promise<MSUser[]> {
 	const response = await fetch(`${API_BASE_URL}/graph/users`, {
 		credentials: 'include',
 	});
@@ -30,6 +35,8 @@ export async function getAllUsers(): Promise<User[]> {
 		displayName: user.displayName,
 		email: user.mail || user.email || user.userPrincipalName,
 		userPrincipalName: user.userPrincipalName,
+		timezone: user.timezone || user.TimeZone,
+		lastSynced: user.lastSynced,
 	}));
 }
 
@@ -52,13 +59,14 @@ export async function searchUsers(query: string): Promise<User[]> {
 }
 
 // Helper function to convert User to Participant format for UI components
-export function userToParticipant(user: User): Participant {
+export function userToParticipant(user: User | MSUser): Participant {
+	const msUser = user as MSUser;
 	return {
 		...user,
 		name: user.displayName,
 		avatar: `${import.meta.env.VITE_AVATAR_API_URL || 'https://api.dicebear.com/7.x/avataaars/svg'}?seed=${user.displayName}`,
 		role: extractRole(user.email),
-		timezone: 'PST',
+		timezone: msUser.timezone || 'PST', // Use actual timezone from backend if available
 		status: 'available',
 	};
 }
