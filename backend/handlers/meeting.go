@@ -184,7 +184,8 @@ func FindMeetingTimes(cfg *config.Config) gin.HandlerFunc {
 		participantCalendars := make(map[string][]models.Event)
 
 		for _, participant := range allParticipants {
-			events, err := client.GetCalendarView(participant, req.StartTime, req.EndTime)
+			// client.GetUserEvents(participant, req.StartTime, req.EndTime)
+			events, err := client.GetUserEvents(participant, req.StartTime, req.EndTime)
 			if err != nil {
 				log.Printf("Warning: Failed to fetch calendar for %s: %v", participant, err)
 				// Continue with empty calendar for this participant
