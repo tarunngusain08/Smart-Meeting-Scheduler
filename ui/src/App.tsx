@@ -62,6 +62,30 @@ export default function App() {
     };
   }, []);
 
+  // Apply dark mode to html and body elements for full-screen coverage
+  useEffect(() => {
+    const htmlElement = document.documentElement;
+    const bodyElement = document.body;
+    
+    if (darkMode && isAuthenticated) {
+      htmlElement.classList.add('dark');
+      htmlElement.style.backgroundColor = '';
+      bodyElement.classList.add('dark');
+      bodyElement.style.backgroundColor = '';
+    } else {
+      htmlElement.classList.remove('dark');
+      htmlElement.style.backgroundColor = '';
+      bodyElement.classList.remove('dark');
+      bodyElement.style.backgroundColor = '';
+    }
+
+    return () => {
+      // Cleanup on unmount
+      htmlElement.classList.remove('dark');
+      bodyElement.classList.remove('dark');
+    };
+  }, [darkMode, isAuthenticated]);
+
   const handleLogout = () => {
     // Add professional logout animation
     const overlay = document.createElement('div');
@@ -127,7 +151,7 @@ export default function App() {
               <Navigate to="/" replace />
             ) : (
               <div className={darkMode ? 'dark' : ''}>
-                <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 transition-colors duration-300">
+                <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 transition-colors duration-300 overflow-auto">
                   <Header 
                     darkMode={darkMode} 
                     onToggleDarkMode={() => setDarkMode(!darkMode)}
