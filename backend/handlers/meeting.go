@@ -129,6 +129,28 @@ func CreateMeeting(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
+		// Send meeting invitations to attendees asynchronously
+		go func() {
+			sender := services.GetInviteSender()
+
+			invite := &services.MeetingInvite{
+				Subject:     req.Subject,
+				Description: req.Description,
+				StartTime:   req.Start.Format(time.RFC3339),
+				EndTime:     req.End.Format(time.RFC3339),
+				Attendees:   req.Attendees,
+				Organizer:   organizer,
+				Location:    req.Location,
+			}
+
+			if err := sender.SendInvite(invite); err != nil {
+				log.Printf("Failed to send meeting invite: %v", err)
+				// Don't fail the request - meeting was created successfully
+			} else {
+				log.Printf("Successfully sent meeting invites to %d attendees", len(req.Attendees))
+			}
+		}()
+
 		c.JSON(http.StatusCreated, gin.H{
 			"message": "Meeting created successfully",
 			"event":   event,
