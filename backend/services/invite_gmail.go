@@ -46,9 +46,10 @@ func NewGmailSender() *GmailSender {
 }
 
 // SendInvite sends a meeting invitation via Gmail SMTP with .ics attachment
+// Sends individual emails to each attendee for better Outlook compatibility
 func (g *GmailSender) SendInvite(invite *MeetingInvite) error {
 	if g.Email == "" || g.Password == "" {
-		return fmt.Errorf("Gmail credentials not configured (GMAIL_EMAIL and GMAIL_APP_PASSWORD required)")
+		return fmt.Errorf("gmail credentials not configured (GMAIL_EMAIL and GMAIL_APP_PASSWORD required)")
 	}
 
 	// Generate .ics file content
@@ -57,25 +58,44 @@ func (g *GmailSender) SendInvite(invite *MeetingInvite) error {
 		return fmt.Errorf("failed to generate ICS content: %w", err)
 	}
 
-	// Build MIME email with .ics attachment
-	message, err := buildMIMEMessage(invite, icsContent, g.Email)
-	if err != nil {
-		return fmt.Errorf("failed to build MIME message: %w", err)
-	}
-
 	// Authenticate with Gmail
 	auth := smtp.PlainAuth("", g.Email, g.Password, g.SMTPHost)
 	addr := fmt.Sprintf("%s:%s", g.SMTPHost, g.SMTPPort)
 
-	// Send to all attendees
-	recipients := append([]string{}, invite.Attendees...)
+	// Send individual emails to each attendee for better delivery
+	// This ensures Outlook receives the invite properly
+	var lastErr error
+	sentCount := 0
+	for _, attendee := range invite.Attendees {
+		// Build MIME email with .ics attachment for this specific attendee
+		message, err := buildMIMEMessage(invite, icsContent, g.Email, attendee)
+		if err != nil {
+			log.Printf("Failed to build MIME message for %s: %v", attendee, err)
+			lastErr = err
+			continue
+		}
 
-	err = smtp.SendMail(addr, auth, g.Email, recipients, []byte(message))
-	if err != nil {
-		return fmt.Errorf("failed to send email via Gmail SMTP: %w", err)
+		// Send to this specific attendee
+		recipients := []string{attendee}
+		err = smtp.SendMail(addr, auth, g.Email, recipients, []byte(message))
+		if err != nil {
+			log.Printf("Failed to send email to %s: %v", attendee, err)
+			lastErr = err
+			continue
+		}
+		sentCount++
+		log.Printf("Successfully sent meeting invite via Gmail to %s", attendee)
 	}
 
-	log.Printf("Successfully sent meeting invite via Gmail to %d attendees", len(recipients))
+	if sentCount == 0 {
+		return fmt.Errorf("failed to send any invites: %w", lastErr)
+	}
+
+	if sentCount < len(invite.Attendees) {
+		log.Printf("Warning: Only sent %d out of %d invites", sentCount, len(invite.Attendees))
+	}
+
+	log.Printf("Successfully sent meeting invites via Gmail to %d out of %d attendees", sentCount, len(invite.Attendees))
 	return nil
 }
 
@@ -152,28 +172,29 @@ func generateICS(invite *MeetingInvite, organizerEmail string) (string, error) {
 	location := escapeICalText(invite.Location)
 
 	// Build iCalendar content per RFC 5545
+	// Use explicit CRLF line endings for Outlook compatibility
 	ics := fmt.Sprintf(
-		`BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Gruve.ai//Smart Meeting Scheduler//EN
-METHOD:REQUEST
-CALSCALE:GREGORIAN
-BEGIN:VEVENT
-UID:%s
-DTSTAMP:%s
-DTSTART:%s
-DTEND:%s
-SUMMARY:%s
-DESCRIPTION:%s
-LOCATION:%s
-ORGANIZER;CN=%s:mailto:%s
-%sSTATUS:CONFIRMED
-SEQUENCE:0
-PRIORITY:5
-CLASS:PUBLIC
-TRANSP:OPAQUE
-END:VEVENT
-END:VCALENDAR`,
+		"BEGIN:VCALENDAR\r\n"+
+			"VERSION:2.0\r\n"+
+			"PRODID:-//Gruve.ai//Smart Meeting Scheduler//EN\r\n"+
+			"METHOD:REQUEST\r\n"+
+			"CALSCALE:GREGORIAN\r\n"+
+			"BEGIN:VEVENT\r\n"+
+			"UID:%s\r\n"+
+			"DTSTAMP:%s\r\n"+
+			"DTSTART:%s\r\n"+
+			"DTEND:%s\r\n"+
+			"SUMMARY:%s\r\n"+
+			"DESCRIPTION:%s\r\n"+
+			"LOCATION:%s\r\n"+
+			"ORGANIZER;CN=%s:mailto:%s\r\n"+
+			"%sSTATUS:CONFIRMED\r\n"+
+			"SEQUENCE:0\r\n"+
+			"PRIORITY:5\r\n"+
+			"CLASS:PUBLIC\r\n"+
+			"TRANSP:OPAQUE\r\n"+
+			"END:VEVENT\r\n"+
+			"END:VCALENDAR\r\n",
 		uid,
 		timestamp,
 		startTime,
@@ -190,33 +211,39 @@ END:VCALENDAR`,
 }
 
 // buildMIMEMessage constructs a multipart MIME email with both text and .ics attachment
-func buildMIMEMessage(invite *MeetingInvite, icsContent string, fromEmail string) (string, error) {
+// Improved for Outlook compatibility
+// recipient is the specific email address to send to (for individual emails)
+func buildMIMEMessage(invite *MeetingInvite, icsContent string, fromEmail string, recipient string) (string, error) {
 	var buffer strings.Builder
 	boundary := generateBoundary()
 
-	// Email headers
+	// Email headers - improved for Outlook compatibility
 	buffer.WriteString(fmt.Sprintf("From: %s\r\n", fromEmail))
-	buffer.WriteString(fmt.Sprintf("To: %s\r\n", strings.Join(invite.Attendees, ", ")))
+	buffer.WriteString(fmt.Sprintf("To: %s\r\n", recipient))
 	buffer.WriteString(fmt.Sprintf("Subject: %s\r\n", invite.Subject))
 	buffer.WriteString("MIME-Version: 1.0\r\n")
 	buffer.WriteString(fmt.Sprintf("Content-Type: multipart/mixed; boundary=\"%s\"\r\n", boundary))
+	buffer.WriteString("Content-Transfer-Encoding: 7bit\r\n")
+	buffer.WriteString("X-Mailer: Smart Meeting Scheduler\r\n")
+	buffer.WriteString("Reply-To: " + fromEmail + "\r\n")
 	buffer.WriteString("\r\n")
 
 	// Text part
 	buffer.WriteString(fmt.Sprintf("--%s\r\n", boundary))
 	buffer.WriteString("Content-Type: text/plain; charset=\"UTF-8\"\r\n")
-	buffer.WriteString("Content-Transfer-Encoding: quoted-printable\r\n")
+	buffer.WriteString("Content-Transfer-Encoding: 7bit\r\n")
 	buffer.WriteString("\r\n")
 
 	emailBody := buildEmailBody(invite)
 	buffer.WriteString(emailBody)
 	buffer.WriteString("\r\n\r\n")
 
-	// Calendar attachment part
+	// Calendar attachment part - improved for Outlook compatibility
 	buffer.WriteString(fmt.Sprintf("--%s\r\n", boundary))
-	buffer.WriteString("Content-Type: text/calendar; method=REQUEST; charset=\"UTF-8\"; name=\"invite.ics\"\r\n")
-	buffer.WriteString("Content-Transfer-Encoding: quoted-printable\r\n")
+	buffer.WriteString("Content-Type: text/calendar; method=REQUEST; charset=\"UTF-8\"\r\n")
+	buffer.WriteString("Content-Transfer-Encoding: 7bit\r\n")
 	buffer.WriteString("Content-Disposition: attachment; filename=\"invite.ics\"\r\n")
+	buffer.WriteString("X-Mailer: Smart Meeting Scheduler\r\n")
 	buffer.WriteString("\r\n")
 	buffer.WriteString(icsContent)
 	buffer.WriteString("\r\n")
