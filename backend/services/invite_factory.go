@@ -6,37 +6,24 @@ import (
 )
 
 // GetInviteSender returns the appropriate Sender implementation based on configuration
-// Configuration is determined by the INVITE_SENDER_MODE environment variable:
+// Configuration is determined by the MAIL_MODE environment variable:
 // - "gmail": Uses Gmail SMTP to send .ics invitations
 // - "mailtrap" (default): Uses Mailtrap for testing (emails captured, not sent)
 func GetInviteSender() Sender {
-	mode := os.Getenv("INVITE_SENDER_MODE")
+	mode := os.Getenv("MAIL_MODE")
 
 	switch mode {
 	case "gmail":
 		log.Println("Using Gmail SMTP sender for meeting invitations")
 		return NewGmailSender()
 
-	case "mailtrap", "":
+	case "sendgrid":
 		// Default to Mailtrap for safe testing
-		log.Println("Using Mailtrap sender for meeting invitations (test mode - emails captured)")
-		return NewMailtrapSender()
+		log.Println("Using Sendgrid sender for meeting invitations (test mode - emails captured)")
+		return nil
 
 	default:
-		log.Printf("Unknown INVITE_SENDER_MODE: %s, defaulting to gmail", mode)
+		log.Printf("Unknown MAIL_MODE: %s, defaulting to gmail", mode)
 		return NewGmailSender()
-	}
-}
-
-// GetInviteSenderForMode allows explicit mode selection
-// Useful for testing or when you want to override the environment variable
-func GetInviteSenderForMode(mode string) Sender {
-	switch mode {
-	case "gmail":
-		return NewGmailSender()
-	case "mailtrap":
-		return NewMailtrapSender()
-	default:
-		return NewMailtrapSender()
 	}
 }
