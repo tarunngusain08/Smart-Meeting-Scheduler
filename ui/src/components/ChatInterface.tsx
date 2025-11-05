@@ -3,7 +3,6 @@ import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { ScheduleMeetingCard } from './ScheduleMeetingCard';
 import { TimeSlotCard } from './TimeSlotCard';
-import { ScrollArea } from './ui/scroll-area';
 import { motion, AnimatePresence } from 'motion/react';
 import { handleUserPrompt } from '../api/chat';
 import { 
@@ -465,24 +464,33 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
   return (
     <div className="flex flex-col h-full rounded-2xl border-2 border-gray-300/60 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-xl overflow-hidden">
       {/* Messages Area */}
-      <ScrollArea className="flex-1 p-6 bg-gradient-to-b from-gray-100 to-gray-50 dark:from-slate-800 dark:to-slate-900" ref={scrollRef}>
+      <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-b from-gray-100 to-gray-50 dark:from-slate-800 dark:to-slate-900 scroll-smooth" ref={scrollRef}>
         <div className="space-y-6">
           <AnimatePresence mode="popLayout">
             {messages.map((message, index) => (
               <motion.div
                 key={message.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                transition={{ 
+                  duration: 0.4, 
+                  ease: [0.4, 0, 0.2, 1],
+                  opacity: { duration: 0.3 }
+                }}
               >
                 <ChatMessage message={message} />
                 
                 {message.showScheduleWidget && (
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.2 }}
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    transition={{ 
+                      delay: 0.2, 
+                      duration: 0.4,
+                      ease: [0.4, 0, 0.2, 1]
+                    }}
                     className="mt-4"
                   >
                     <ScheduleMeetingCard 
@@ -548,8 +556,10 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
 
           {isTyping && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
             >
               <ChatMessage
                 message={{
@@ -563,7 +573,7 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
             </motion.div>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Input Area */}
       <ChatInput onSend={handleSendMessage} />
