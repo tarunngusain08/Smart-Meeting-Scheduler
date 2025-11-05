@@ -240,41 +240,41 @@ Keep each insight under 100 characters. Format as short, practical tips.`;
   };
 
   return (
-    <div className="h-full flex flex-col gap-4">
+    <div className="h-full flex flex-col gap-3 overflow-y-auto">
       {/* Selected Participants */}
-      <Card className="border-2 border-emerald-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
-            <Users className="h-5 w-5 text-[#10B981]" />
+      <Card className="border border-emerald-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-md">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-1.5 text-gray-900 dark:text-white text-sm">
+            <Users className="h-4 w-4 text-[#10B981]" />
             Selected Participants
           </CardTitle>
-          <CardDescription className="text-gray-600 dark:text-gray-400">
-            {selected.length === 0 ? 'No participants selected' : `${selected.length} participant${selected.length > 1 ? 's' : ''} selected`}
+          <CardDescription className="text-gray-600 dark:text-gray-400 text-xs">
+            {selected.length === 0 ? 'None selected' : `${selected.length} participant${selected.length > 1 ? 's' : ''}`}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-2">
           {selected.length === 0 ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Select participants from the scheduling widget to see their details here.
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Select participants from the scheduling widget.
             </p>
           ) : (
-            <ScrollArea className="max-h-[300px]">
-              <div className="space-y-3.5 pr-2">
+            <ScrollArea className="max-h-[240px]">
+              <div className="space-y-2.5 pr-2">
                 {selected.map((participant) => (
-                  <div key={participant.id} className="flex items-start gap-2.5">
-                    <Avatar className="h-9 w-9 ring-2 ring-emerald-500 shadow-md flex-shrink-0">
+                  <div key={participant.id} className="flex items-start gap-2">
+                    <Avatar className="h-7 w-7 ring-1 ring-emerald-500 shadow-sm flex-shrink-0">
                       <AvatarImage src={participant.avatar} />
-                      <AvatarFallback className="text-xs">{participant.name[0]}</AvatarFallback>
+                      <AvatarFallback className="text-[10px]">{participant.name[0]}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                      <p className="text-xs font-medium text-slate-900 dark:text-white truncate">
                         {participant.name}
                       </p>
-                      <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                        <span className="text-xs text-slate-500 dark:text-slate-400">{participant.role}</span>
+                      <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">{participant.role}</span>
                         <Badge
                           variant="outline"
-                          className={`text-xs py-0 px-1.5 h-5 ${
+                          className={`text-[10px] py-0 px-1 h-4 ${
                             participant.status === 'available'
                               ? 'border-emerald-500/50 text-emerald-600 dark:text-emerald-400'
                               : participant.status === 'busy'
@@ -287,10 +287,10 @@ Keep each insight under 100 characters. Format as short, practical tips.`;
                         {participant.timezone && (
                           <Badge
                             variant="outline"
-                            className="text-xs border-blue-500/50 text-blue-600 dark:text-blue-400 flex items-center gap-1 py-0 px-1.5 h-5"
+                            className="text-[10px] border-blue-500/50 text-blue-600 dark:text-blue-400 flex items-center gap-0.5 py-0 px-1 h-4"
                             title={getTimezoneDisplayName(participant.timezone)}
                           >
-                            <Globe className="h-3 w-3" />
+                            <Globe className="h-2.5 w-2.5" />
                             {getTimezoneAbbreviation(participant.timezone)}
                           </Badge>
                         )}
@@ -306,31 +306,31 @@ Keep each insight under 100 characters. Format as short, practical tips.`;
 
       {/* Next Meeting */}
       {nextMeeting && (
-        <Card className="border-2 border-emerald-400 dark:border-emerald-600 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-950 dark:to-teal-950 shadow-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
-              <Calendar className="h-5 w-5 text-[#10B981]" />
+        <Card className="border border-emerald-400 dark:border-emerald-600 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-950 dark:to-teal-950 shadow-lg">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-1.5 text-gray-900 dark:text-white text-sm">
+              <Calendar className="h-4 w-4 text-[#10B981]" />
               Next Meeting
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2 pt-2">
             <div>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Date & Time</p>
-              <p className="text-slate-900 dark:text-white">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Date & Time</p>
+              <p className="text-xs text-slate-900 dark:text-white">
                 {nextMeeting.date} at {nextMeeting.time}
               </p>
             </div>
             <div>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Duration</p>
-              <p className="text-slate-900 dark:text-white">{nextMeeting.duration}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Duration</p>
+              <p className="text-xs text-slate-900 dark:text-white">{nextMeeting.duration}</p>
             </div>
             <div>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Participants</p>
-              <div className="flex -space-x-2">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Participants</p>
+              <div className="flex -space-x-1.5">
                 {nextMeeting.participants.map((name: string, idx: number) => (
-                  <Avatar key={idx} className="h-8 w-8 ring-2 ring-white dark:ring-slate-900">
+                  <Avatar key={idx} className="h-6 w-6 ring-1 ring-white dark:ring-slate-900">
                   <AvatarImage src={`${import.meta.env.VITE_AVATAR_API_URL || 'https://api.dicebear.com/7.x/avataaars/svg'}?seed=${name}`} />
-                    <AvatarFallback className="text-xs">{name[0]}</AvatarFallback>
+                    <AvatarFallback className="text-[10px]">{name[0]}</AvatarFallback>
                   </Avatar>
                 ))}
               </div>
@@ -340,35 +340,35 @@ Keep each insight under 100 characters. Format as short, practical tips.`;
       )}
 
       {/* AI Insights */}
-      <Card className="border-2 border-emerald-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
-            <Sparkles className="h-5 w-5 text-[#10B981]" />
+      <Card className="border border-emerald-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-md">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-1.5 text-gray-900 dark:text-white text-sm">
+            <Sparkles className="h-4 w-4 text-[#10B981]" />
             AI Insights
             {insightsLoading && (
-              <Loader2 className="h-4 w-4 ml-auto animate-spin text-[#10B981]" />
+              <Loader2 className="h-3 w-3 ml-auto animate-spin text-[#10B981]" />
             )}
           </CardTitle>
-          <CardDescription className="text-gray-600 dark:text-gray-400">
+          <CardDescription className="text-gray-600 dark:text-gray-400 text-xs">
             {selected.length > 0 
-              ? `Personalized insights for ${selected.length} participant${selected.length > 1 ? 's' : ''}`
-              : 'Select participants to see insights'}
+              ? `For ${selected.length} participant${selected.length > 1 ? 's' : ''}`
+              : 'Select participants'}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-2">
           {selected.length === 0 ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
-              Select participants from the scheduling widget to see AI-powered insights.
+            <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-3">
+              Select participants to see insights.
             </p>
           ) : insightsLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-[#10B981]" />
-              <span className="ml-2 text-sm text-slate-600 dark:text-slate-400">
-                Generating insights...
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-[#10B981]" />
+              <span className="ml-2 text-xs text-slate-600 dark:text-slate-400">
+                Generating...
               </span>
             </div>
           ) : aiInsights.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {aiInsights.map((insight) => {
                 const colorClasses = {
                   blue: 'bg-blue-50 dark:bg-blue-950/30 border-blue-200/50 dark:border-blue-800/50',
@@ -380,16 +380,16 @@ Keep each insight under 100 characters. Format as short, practical tips.`;
                 return (
                   <div
                     key={insight.id}
-                    className={`flex items-start gap-3 p-3 rounded-lg border transition-all hover:shadow-md ${colorClasses[insight.color as keyof typeof colorClasses] || colorClasses.blue}`}
+                    className={`flex items-start gap-2 p-2 rounded-md border transition-all hover:shadow-sm ${colorClasses[insight.color as keyof typeof colorClasses] || colorClasses.blue}`}
                   >
                     <div className="mt-0.5 flex-shrink-0">
                       {insight.icon}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900 dark:text-white">
+                      <p className="text-xs font-medium text-slate-900 dark:text-white">
                         {insight.title}
                       </p>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                      <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-0.5">
                         {insight.description}
                       </p>
                     </div>
@@ -398,30 +398,30 @@ Keep each insight under 100 characters. Format as short, practical tips.`;
               })}
             </div>
           ) : (
-            <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
-              No insights available at the moment.
+            <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-3">
+              No insights available.
             </p>
           )}
         </CardContent>
       </Card>
 
       {/* Timezone */}
-      <Card className="border-2 border-gray-300/50 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
-            <Globe className="h-5 w-5 text-blue-500" />
+      <Card className="border border-gray-300/50 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 shadow-md">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-1.5 text-gray-900 dark:text-white text-sm">
+            <Globe className="h-4 w-4 text-blue-500" />
             Time Zone
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
+        <CardContent className="pt-2">
+          <div className="space-y-1.5">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-slate-600 dark:text-slate-400">Your timezone:</span>
-              <Badge variant="secondary">{currentUserTimezone}</Badge>
+              <span className="text-xs text-slate-600 dark:text-slate-400">Your timezone:</span>
+              <Badge variant="secondary" className="text-[10px] h-5">{currentUserTimezone}</Badge>
             </div>
             <Separator />
-            <div className="text-xs text-slate-500 dark:text-slate-400">
-              All times shown in {currentUserTimezone.split(' ')[0].toLowerCase()}. Participants in other time zones will see adjusted times.
+            <div className="text-[10px] text-slate-500 dark:text-slate-400">
+              All times shown in {currentUserTimezone.split(' ')[0].toLowerCase()}. Other zones see adjusted times.
             </div>
           </div>
         </CardContent>
