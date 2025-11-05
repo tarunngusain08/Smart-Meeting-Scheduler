@@ -269,6 +269,8 @@ export async function checkQuickAvailability(
 
 /**
  * Schedule a meeting with smart time finding
+ * NOTE: This function only finds meeting times - it does NOT create a meeting
+ * The meeting should be created separately when the user confirms a slot
  */
 export async function smartScheduleMeeting(
   subject: string,
@@ -281,8 +283,8 @@ export async function smartScheduleMeeting(
     description?: string;
     location?: string;
   }
-): Promise<{ message: string; event: Event; suggestions?: MeetingSuggestion[] }> {
-  // First, find available meeting times
+): Promise<{ message: string; suggestions: MeetingSuggestion[] }> {
+  // Find available meeting times
   const meetingTimesResponse = await findMeetingTimes({
     Attendees: attendees,
     Duration: duration,
@@ -291,25 +293,11 @@ export async function smartScheduleMeeting(
     MaxSuggestions: 5,
   }, organizer);
 
-  // If we have suggestions, use the first one (highest confidence)
+  // Return suggestions - DO NOT create a meeting automatically
   if (meetingTimesResponse.suggestions.length > 0) {
-    const bestSlot = meetingTimesResponse.suggestions[0];
-    
-    const meetingRequest: CreateMeetingRequest = {
-      subject,
-      start: bestSlot.start,
-      end: bestSlot.end,
-      attendees,
-      isOnline: options?.isOnline ?? true,
-      description: options?.description,
-      location: options?.location,
-    };
-
-    const result = await createMeeting(meetingRequest, organizer);
-    
     return {
-      ...result,
-      suggestions: meetingTimesResponse.suggestions.slice(1), // Return other suggestions
+      message: meetingTimesResponse.message || 'Meeting times found successfully',
+      suggestions: meetingTimesResponse.suggestions,
     };
   }
 
