@@ -130,26 +130,33 @@ func CreateMeeting(cfg *config.Config) gin.HandlerFunc {
 		}
 
 		// Send meeting invitations to attendees asynchronously
-		go func() {
-			sender := services.GetInviteSender()
+		// Only send custom invites if using mock mode (Graph API automatically sends invites)
+		mode := os.Getenv("GRAPH_MODE")
+		if mode != "real" {
+			// Using mock mode, send custom invites via email
+			go func() {
+				sender := services.GetInviteSender()
 
-			invite := &services.MeetingInvite{
-				Subject:     req.Subject,
-				Description: req.Description,
-				StartTime:   req.Start.Format(time.RFC3339),
-				EndTime:     req.End.Format(time.RFC3339),
-				Attendees:   req.Attendees,
-				Organizer:   organizer,
-				Location:    req.Location,
-			}
+				invite := &services.MeetingInvite{
+					Subject:     req.Subject,
+					Description: req.Description,
+					StartTime:   req.Start.Format(time.RFC3339),
+					EndTime:     req.End.Format(time.RFC3339),
+					Attendees:   req.Attendees,
+					Organizer:   organizer,
+					Location:    req.Location,
+				}
 
-			if err := sender.SendInvite(invite); err != nil {
-				log.Printf("Failed to send meeting invite: %v", err)
-				// Don't fail the request - meeting was created successfully
-			} else {
-				log.Printf("Successfully sent meeting invites to %d attendees", len(req.Attendees))
-			}
-		}()
+				if err := sender.SendInvite(invite); err != nil {
+					log.Printf("Failed to send meeting invite: %v", err)
+					// Don't fail the request - meeting was created successfully
+				} else {
+					log.Printf("Successfully sent meeting invites to %d attendees", len(req.Attendees))
+				}
+			}()
+		} else {
+			log.Printf("Using real Graph API - invites are sent automatically by Microsoft Graph")
+		}
 
 		c.JSON(http.StatusCreated, gin.H{
 			"message": "Meeting created successfully",
