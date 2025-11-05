@@ -8,16 +8,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { handleUserPrompt } from '../api/chat';
 import { 
   checkQuickAvailability as checkQuickAvailabilityNew,
-  getCalendarEvents,
   findMeetingTimes,
   createMeeting,
-  smartScheduleMeeting,
-  parseEvent,
-  parseMeetingSuggestion,
-  type Event,
-  type MeetingSuggestion as BackendMeetingSuggestion
+  type CreateMeetingRequest
 } from '../api/calendarNew';
 import { format, addDays } from 'date-fns';
+import { getAllUsers } from '../api/users';
+import { toast } from 'sonner';
 
 interface Message {
   id: string;
@@ -206,42 +203,100 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
   const handleConfirmSlot = async (slot: any) => {
     setIsTyping(true);
     
-    // Simulate API delay
-    setTimeout(() => {
-      setIsTyping(false);
+    try {
+      // Get attendee emails from participant names
+      let attendeeEmails: string[] = [];
       
-      // Generate mock Teams meeting link
-      const mockMeetingId = `mock-${Date.now()}`;
-      const mockTeamsLink = `https://teams.microsoft.com/l/meetup-join/mock/${mockMeetingId}`;
-      
-      // Create mock meeting object with format expected by Sidebar
-      const meetingTitle = slot.meetingHeadline || slot.title || 'Team Meeting';
+      try {
+        const allUsers = await getAllUsers();
+        const participantsMap = new Map(
+          allUsers.map(user => [user.displayName, user.email])
+        );
+        
+        // Map participant names to emails
+        attendeeEmails = slot.participants
+          .map((name: string) => participantsMap.get(name))
+          .filter((email: string | undefined): email is string => email !== undefined);
+        
+        // If we couldn't map all participants, use names as fallback
+        // (backend might handle name-to-email conversion)
+        if (attendeeEmails.length === 0) {
+          attendeeEmails = slot.participants;
+        }
+      } catch (error) {
+        console.warn('Failed to fetch users for email mapping, using participant names:', error);
+        // Fallback: use participant names directly (backend might handle conversion)
+        attendeeEmails = slot.participants;
+      }
+
+      // Parse start and end times from ISO strings
+      const startTime = new Date(slot.rawStart);
+      const endTime = new Date(slot.rawEnd);
+
+      // Prepare meeting request
+      const meetingRequest: CreateMeetingRequest = {
+        subject: slot.meetingHeadline || slot.title || 'Team Meeting',
+        start: startTime.toISOString(),
+        end: endTime.toISOString(),
+        attendees: attendeeEmails,
+        description: slot.agenda || undefined,
+        location: undefined,
+        isOnline: false, // Can be made configurable
+      };
+
+      // Call the backend API to create the meeting
+      const result = await createMeeting(meetingRequest);
+
+      // Create meeting object with format expected by Sidebar
       const meeting = {
-        id: mockMeetingId,
-        subject: meetingTitle,
-        title: meetingTitle,
-        start: slot.rawStart,
-        end: slot.rawEnd,
+        id: result.event.id,
+        subject: result.event.subject,
+        title: result.event.subject,
+        start: result.event.start,
+        end: result.event.end,
         participants: slot.participants,
         date: slot.date,
         time: slot.time,
         duration: typeof slot.duration === 'string' ? slot.duration : `${slot.duration}m`,
-        isOnline: true,
-        onlineUrl: mockTeamsLink,
+        isOnline: result.event.isOnline,
+        onlineUrl: result.event.onlineUrl,
       };
-      
+
       // Notify parent component to update sidebar
       onMeetingScheduled(meeting);
 
-      // Send static confirmation message
+      // Show success toast
+      toast.success('Meeting scheduled successfully!', {
+        description: `Calendar invites have been sent to all ${attendeeEmails.length} participant(s).`,
+      });
+
+      // Send success confirmation message
       const confirmMessage: Message = {
         id: Date.now().toString(),
         type: 'ai',
-        content: `Perfect! I've scheduled your meeting "${meetingTitle}" for ${slot.date} at ${slot.time}.\n\n🔗 Teams Meeting Link: ${mockTeamsLink}\n\nCalendar invites have been sent to all ${slot.participants.length} participant(s). Is there anything else I can help you with?`,
+        content: `Perfect! I've scheduled your meeting "${meeting.subject}" for ${slot.date} at ${slot.time}.\n\n✅ Meeting created successfully!\n📧 Calendar invites have been sent to all ${attendeeEmails.length} participant(s).\n\n${result.event.onlineUrl ? `🔗 ${result.event.isOnline ? 'Online Meeting Link' : 'Meeting Link'}: ${result.event.onlineUrl}\n\n` : ''}Is there anything else I can help you with?`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, confirmMessage]);
-    }, 1000);
+    } catch (error) {
+      console.error('Failed to create meeting:', error);
+      
+      // Show error toast
+      toast.error('Failed to schedule meeting', {
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+      });
+
+      // Send error message to chat
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        type: 'ai',
+        content: `Sorry, I encountered an error while scheduling your meeting: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again or select a different time slot.`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const handleQuickAction = async (action: string) => {
