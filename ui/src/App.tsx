@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LandingPage } from './components/LandingPage';
 import { AuthCallback } from './components/AuthCallback';
 import { Header } from './components/Header';
 import { ChatInterface } from './components/ChatInterface';
 import { Sidebar } from './components/Sidebar';
+import { LeftSidebar } from './components/LeftSidebar';
 import { Toaster } from './components/ui/sonner';
 
 export default function App() {
@@ -158,24 +159,40 @@ export default function App() {
                     onLogout={handleLogout}
                   />
                   
-                  <div className="container mx-auto px-4 py-6 max-w-[1400px]">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-120px)]">
-                      {/* Main Chat Area */}
-                      <div className="lg:col-span-2">
+                  <div className="w-full px-4 py-6">
+                    <div className="flex flex-row gap-6 h-[calc(100vh-120px)] max-w-[2000px] mx-auto">
+                      {/* Left Sidebar - Compact */}
+                      <aside className="w-56 xl:w-64 flex-shrink-0">
+                        <LeftSidebar 
+                          onQuickAction={(action) => {
+                            if ((window as any).__chatInterfaceHandlers) {
+                              (window as any).__chatInterfaceHandlers.handleQuickAction(action);
+                            }
+                          }}
+                          onScheduleMeeting={() => {
+                            if ((window as any).__chatInterfaceHandlers) {
+                              (window as any).__chatInterfaceHandlers.triggerScheduleMeeting();
+                            }
+                          }}
+                        />
+                      </aside>
+                      
+                      {/* Main Chat Area - More space */}
+                      <main className="flex-1 min-w-0 max-w-[1200px]">
                         <ChatInterface 
                           selectedParticipants={selectedParticipants}
                           setSelectedParticipants={setSelectedParticipants}
                           onMeetingScheduled={setNextMeeting}
                         />
-                      </div>
+                      </main>
                       
-                      {/* Sidebar */}
-                      <div className="lg:col-span-1 hidden lg:block">
+                      {/* Right Sidebar - Compact */}
+                      <aside className="w-72 xl:w-80 flex-shrink-0">
                         <Sidebar 
                           selectedParticipants={selectedParticipants}
                           nextMeeting={nextMeeting}
                         />
-                      </div>
+                      </aside>
                     </div>
                   </div>
                   
