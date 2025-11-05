@@ -10,6 +10,7 @@ import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import { motion } from 'motion/react';
 import { getAllUsers, userToParticipant, Participant } from '../api/users';
+import { smartScheduleMeeting } from '../api/calendarNew';
 
 interface ScheduleMeetingCardProps {
   onSchedule: (data: any) => void;
@@ -82,7 +83,7 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
     }
   };
 
-  const handleFindSlot = () => {
+  const handleFindSlot = async () => {
     if (selectedParticipants.length === 0) return;
     if (!meetingHeadline.trim()) {
       // Show error if headline is missing
@@ -121,9 +122,38 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
         endTime = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     }
 
+    // Convert duration string to minutes
+    const durationInMinutes = duration === '30m' ? 30 : 
+                              duration === '1h' ? 60 : 
+                              duration === '1.5h' ? 90 : 
+                              duration === '2h' ? 120 : 60;
+
+    // Get attendee emails from selected participants
+    const attendeeEmails = selectedParticipants
+      .map(name => {
+        const participant = availableParticipants.find(p => p.name === name);
+        return participant?.email;
+      })
+      .filter((email): email is string => email !== undefined);
+
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    
+    try {
+      // Call the smartScheduleMeeting function
+      const result = await smartScheduleMeeting(
+        meetingHeadline.trim(),
+        attendeeEmails,
+        durationInMinutes,
+        { start: startTime, end: endTime },
+        undefined, // organizer - will use authenticated user
+        {
+          isOnline: false,
+          description: agenda.trim() || undefined,
+          location: undefined,
+        }
+      );
+
+      // Pass the result to the parent component
       onSchedule({
         participants: selectedParticipants,
         duration,
@@ -133,8 +163,17 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
         meetingHeadline: meetingHeadline.trim(),
         agenda: agenda.trim() || undefined,
         priorityAttendees: priorityAttendees.length > 0 ? priorityAttendees : undefined,
+        // Include the API response data
+        suggestions: result.suggestions,
+        message: result.message,
       });
-    }, 2000);
+    } catch (error) {
+      console.error('Failed to schedule meeting:', error);
+      // You can add error handling UI here
+      alert(`Failed to schedule meeting: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isActive) {
