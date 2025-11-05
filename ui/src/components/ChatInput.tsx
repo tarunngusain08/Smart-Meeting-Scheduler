@@ -5,10 +5,9 @@ import { Textarea } from './ui/textarea';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
-  onQuickAction?: (action: string) => void;
 }
 
-export function ChatInput({ onSend, onQuickAction }: ChatInputProps) {
+export function ChatInput({ onSend }: ChatInputProps) {
   const [input, setInput] = useState('');
 
   const handleSend = () => {
@@ -25,11 +24,6 @@ export function ChatInput({ onSend, onQuickAction }: ChatInputProps) {
     }
   };
 
-  const handleQuickAction = (action: string) => {
-    if (onQuickAction) {
-      onQuickAction(action);
-    }
-  };
 
   return (
     <div className="border-t-2 border-gray-300/60 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 p-4">
@@ -58,40 +52,6 @@ export function ChatInput({ onSend, onQuickAction }: ChatInputProps) {
         >
           <Send className="h-6 w-6 text-white stroke-[3]" />
         </Button>
-      </div>
-
-      <div className="mt-2 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
-        <span>Try:</span>
-        <button
-          onClick={() => handleQuickAction('check-today')}
-          className="px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 transition-colors font-medium"
-        >
-          📅 Today
-        </button>
-        <button
-          onClick={() => handleQuickAction('check-tomorrow')}
-          className="px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 transition-colors font-medium"
-        >
-          📅 Tomorrow
-        </button>
-        <button
-          onClick={() => handleQuickAction('check-this-week')}
-          className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 transition-colors font-medium"
-        >
-          📅 This week
-        </button>
-        <button
-          onClick={() => handleQuickAction('check-next-week')}
-          className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 transition-colors font-medium"
-        >
-          📅 Next week
-        </button>
-        <button
-          onClick={() => setInput('Schedule a team meeting')}
-          className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-        >
-          Schedule a meeting
-        </button>
       </div>
     </div>
   );
