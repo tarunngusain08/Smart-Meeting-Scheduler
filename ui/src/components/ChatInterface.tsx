@@ -31,9 +31,11 @@ interface ChatInterfaceProps {
   selectedParticipants: string[];
   setSelectedParticipants: (participants: string[]) => void;
   onMeetingScheduled: (meeting: any) => void;
+  onQuickAction?: (action: string) => void;
+  onScheduleMeeting?: () => void;
 }
 
-export function ChatInterface({ selectedParticipants, setSelectedParticipants, onMeetingScheduled }: ChatInterfaceProps) {
+export function ChatInterface({ selectedParticipants, setSelectedParticipants, onMeetingScheduled, onQuickAction, onScheduleMeeting }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -204,6 +206,25 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
     setIsTyping(true);
     
     try {
+      // First, remove all unconfirmed slots from the UI with animation
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.slots && msg.slots.length > 0) {
+            // Find the confirmed slot
+            const confirmedSlot = msg.slots.find((s) => s.id === slot.id);
+            if (confirmedSlot) {
+              // Keep only the confirmed slot temporarily (for animation)
+              // We'll remove it completely after a brief delay
+              return {
+                ...msg,
+                slots: [confirmedSlot], // Keep only confirmed slot
+              };
+            }
+          }
+          return msg;
+        })
+      );
+
       // Get attendee emails from participant names
       let attendeeEmails: string[] = [];
       
@@ -269,6 +290,21 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
       toast.success('Meeting scheduled successfully!', {
         description: `Calendar invites have been sent to all ${attendeeEmails.length} participant(s).`,
       });
+
+      // Remove the confirmed slot from the message as well (after animation completes)
+      setTimeout(() => {
+        setMessages((prev) =>
+          prev.map((msg) => {
+            if (msg.slots && msg.slots.length > 0) {
+              return {
+                ...msg,
+                slots: undefined, // Remove slots completely
+              };
+            }
+            return msg;
+          })
+        );
+      }, 600); // Wait for exit animation to complete and show confirmation briefly
 
       // Send success confirmation message
       const confirmMessage: Message = {
@@ -401,6 +437,31 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
     }
   };
 
+  // Handle schedule meeting trigger from external component
+  const triggerScheduleMeeting = () => {
+    const scheduleMessage: Message = {
+      id: Date.now().toString(),
+      type: 'ai',
+      content: 'I\'d be happy to help you schedule a meeting! Let me show you the scheduling interface where you can select participants, choose a date range, and I\'ll find the optimal time slots.',
+      timestamp: new Date(),
+      showScheduleWidget: true,
+      scheduleWidgetActive: true,
+    };
+    setMessages((prev) => [...prev, scheduleMessage]);
+  };
+
+  // Expose handlers to parent/window for LeftSidebar access
+  useEffect(() => {
+    (window as any).__chatInterfaceHandlers = {
+      handleQuickAction,
+      triggerScheduleMeeting,
+    };
+
+    return () => {
+      delete (window as any).__chatInterfaceHandlers;
+    };
+  }, [handleQuickAction]); // Include handleQuickAction in deps
+
   return (
     <div className="flex flex-col h-full rounded-2xl border-2 border-gray-300/60 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-xl overflow-hidden">
       {/* Messages Area */}
@@ -442,20 +503,43 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
                   </motion.div>
                 )}
 
-                {message.slots && (
+                {message.slots && message.slots.length > 0 && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
                     className="mt-4 space-y-3"
                   >
-                    {message.slots.map((slot) => (
-                      <TimeSlotCard
-                        key={slot.id}
-                        slot={slot}
-                        onConfirm={handleConfirmSlot}
-                      />
-                    ))}
+                    <AnimatePresence mode="popLayout">
+                      {message.slots.map((slot) => (
+                        <motion.div
+                          key={slot.id}
+                          initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ 
+                            opacity: 0, 
+                            y: -20, 
+                            scale: 0.9,
+                            transition: { 
+                              duration: 0.4, 
+                              ease: [0.4, 0, 0.2, 1],
+                              opacity: { duration: 0.3 }
+                            }
+                          }}
+                          transition={{ 
+                            duration: 0.3, 
+                            ease: "easeOut"
+                          }}
+                          layout
+                          style={{ overflow: 'hidden' }}
+                        >
+                          <TimeSlotCard
+                            slot={slot}
+                            onConfirm={handleConfirmSlot}
+                          />
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
                   </motion.div>
                 )}
               </motion.div>
@@ -482,7 +566,7 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
       </ScrollArea>
 
       {/* Input Area */}
-      <ChatInput onSend={handleSendMessage} onQuickAction={handleQuickAction} />
+      <ChatInput onSend={handleSendMessage} />
     </div>
   );
 }
