@@ -7,6 +7,7 @@ interface Message {
   type: 'user' | 'ai';
   content: string;
   timestamp: Date;
+  isSearching?: boolean;
 }
 
 interface ChatMessageProps {
@@ -51,8 +52,13 @@ export function ChatMessage({ message, isTyping }: ChatMessageProps) {
               ))}
             </div>
           ) : (
-            <p className={`whitespace-pre-line text-base font-medium ${isAI ? 'text-gray-900 dark:text-white' : 'user-message-text'}`}>
+            <p className={`whitespace-pre-line text-base font-medium ${
+              message.isSearching 
+                ? 'text-gray-500 dark:text-gray-400 italic' 
+                : isAI ? 'text-gray-900 dark:text-white' : 'user-message-text'
+            }`}>
               {message.content}
+              {message.isSearching && <span className="animate-pulse ml-1">|</span>}
             </p>
           )}
         </div>
