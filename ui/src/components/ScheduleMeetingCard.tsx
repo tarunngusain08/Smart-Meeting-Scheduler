@@ -128,50 +128,57 @@ export function ScheduleMeetingCard({ onSchedule, selectedParticipants, setSelec
                               duration === '1.5h' ? 90 : 
                               duration === '2h' ? 120 : 60;
 
-    // Get attendee emails from selected participants
-    const attendeeEmails = selectedParticipants
+    // Get attendees with their emails and timezones
+    const attendeesWithTimezone = selectedParticipants
       .map(name => {
         const participant = availableParticipants.find(p => p.name === name);
-        return participant?.email;
+        if (participant?.email) {
+          return {
+            email: participant.email,
+            timezone: participant.timezone || undefined,
+          };
+        }
+        return null;
       })
-      .filter((email): email is string => email !== undefined);
+      .filter((attendee): attendee is { email: string; timezone?: string } => attendee !== null);
 
+    // Get priority attendees with their emails and timezones
+    const priorityAttendeesWithTimezone = priorityAttendees
+      .map(name => {
+        const participant = availableParticipants.find(p => p.name === name);
+        if (participant?.email) {
+          return {
+            email: participant.email,
+            timezone: participant.timezone || undefined,
+          };
+        }
+        return null;
+      })
+      .filter((attendee): attendee is { email: string; timezone?: string } => attendee !== null);
+
+    // Show loading state immediately
     setIsLoading(true);
     
     try {
-      // Call the smartScheduleMeeting function
-      const result = await smartScheduleMeeting(
-        meetingHeadline.trim(),
-        attendeeEmails,
-        durationInMinutes,
-        { start: startTime, end: endTime },
-        undefined, // organizer - will use authenticated user
-        {
-          isOnline: false,
-          description: agenda.trim() || undefined,
-          location: undefined,
-        }
-      );
-
-      // Pass the result to the parent component
+      // Pass the data directly to parent - it will call findMeetingTimes with timezone data
+      // This avoids duplicate API calls
       onSchedule({
         participants: selectedParticipants,
-        duration,
+        participantsWithTimezone: attendeesWithTimezone, // Include timezone data
+        duration: durationInMinutes,
         startDate: startTime,
         endDate: endTime,
         maxSuggestions: 5,
         meetingHeadline: meetingHeadline.trim(),
         agenda: agenda.trim() || undefined,
-        priorityAttendees: priorityAttendees.length > 0 ? priorityAttendees : undefined,
-        // Include the API response data
-        suggestions: result.suggestions,
-        message: result.message,
+        priorityAttendees: priorityAttendeesWithTimezone.length > 0 ? priorityAttendeesWithTimezone : undefined,
       });
+      
+      // Keep loading state - parent will handle the response
+      // Loading state will be cleared when user sees results
+      setTimeout(() => setIsLoading(false), 1000);
     } catch (error) {
-      console.error('Failed to schedule meeting:', error);
-      // You can add error handling UI here
-      alert(`Failed to schedule meeting: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
+      console.error('Failed to prepare meeting data:', error);
       setIsLoading(false);
     }
   };
