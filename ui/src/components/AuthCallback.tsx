@@ -17,9 +17,9 @@ export function AuthCallback() {
           throw new Error('No authorization code received from Microsoft Teams');
         }
 
-        // Exchange the code for tokens using the original endpoint
-        // This will bypass the proxy since it's not in the proxy configuration
-        const response = await fetch('http://localhost:8080/auth/callback', {
+        // Exchange the code for tokens using the backend endpoint
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+        const response = await fetch(`${backendUrl}/auth/callback`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
