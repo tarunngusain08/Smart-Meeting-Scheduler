@@ -68,15 +68,16 @@ export function LeftSidebar({ onQuickAction, onScheduleMeeting }: LeftSidebarPro
   };
 
   return (
-    <div className="h-full flex flex-col gap-3 overflow-y-auto">
-      {/* Quick Actions */}
+    <div className="h-full w-full overflow-y-auto">
+      <div className="space-y-3 w-full">
+      {/* Quick Actions - Fixed Height */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
       >
-        <Card className="border border-emerald-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-md hover:shadow-lg transition-all duration-300">
-          <CardHeader className="pb-2">
+        <Card className="border border-emerald-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-md hover:shadow-lg transition-all duration-300 w-full h-[320px] flex flex-col">
+          <CardHeader className="pb-2 flex-shrink-0">
             <CardTitle className="flex items-center gap-1.5 text-gray-900 dark:text-white text-sm">
               <motion.div
                 whileHover={{ rotate: 15 }}
@@ -90,7 +91,7 @@ export function LeftSidebar({ onQuickAction, onScheduleMeeting }: LeftSidebarPro
               Check availability quickly
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-1.5 pt-2">
+          <CardContent className="space-y-1.5 pt-2 flex-1 min-h-0 overflow-y-auto">
             {quickActions.map((action, index) => (
               <motion.div
                 key={action.id}
@@ -125,14 +126,14 @@ export function LeftSidebar({ onQuickAction, onScheduleMeeting }: LeftSidebarPro
         </Card>
       </motion.div>
 
-      {/* Schedule Meeting */}
+      {/* Schedule Meeting - Fixed Height */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1, ease: [0.4, 0, 0.2, 1] }}
       >
-        <Card className="border border-emerald-400 dark:border-emerald-600 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-950 dark:to-teal-950 shadow-lg hover:shadow-xl transition-all duration-300">
-          <CardHeader className="pb-2">
+        <Card className="border border-emerald-400 dark:border-emerald-600 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-950 dark:to-teal-950 shadow-lg hover:shadow-xl transition-all duration-300 w-full h-[160px] flex flex-col">
+          <CardHeader className="pb-2 flex-shrink-0">
             <CardTitle className="flex items-center gap-1.5 text-gray-900 dark:text-white text-sm">
               <motion.div
                 animate={{ 
@@ -153,7 +154,7 @@ export function LeftSidebar({ onQuickAction, onScheduleMeeting }: LeftSidebarPro
               Start scheduling a meeting
             </CardDescription>
           </CardHeader>
-          <CardContent className="pt-2">
+          <CardContent className="pt-2 flex-1 min-h-0 flex items-center justify-center">
             <motion.div
               whileHover={{ scale: 1.03, y: -2 }}
               whileTap={{ scale: 0.98 }}
@@ -181,14 +182,14 @@ export function LeftSidebar({ onQuickAction, onScheduleMeeting }: LeftSidebarPro
         </Card>
       </motion.div>
 
-      {/* Help Section */}
+      {/* Help Section - Fixed Height */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.2, ease: [0.4, 0, 0.2, 1] }}
       >
-        <Card className="border border-gray-300/50 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 shadow-md hover:shadow-lg transition-all duration-300">
-          <CardHeader className="pb-2">
+        <Card className="border border-gray-300/50 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 shadow-md hover:shadow-lg transition-all duration-300 w-full h-[140px] flex flex-col">
+          <CardHeader className="pb-2 flex-shrink-0">
             <CardTitle className="flex items-center gap-1.5 text-gray-900 dark:text-white text-xs">
               <motion.div
                 whileHover={{ scale: 1.2, rotate: 20 }}
@@ -199,7 +200,7 @@ export function LeftSidebar({ onQuickAction, onScheduleMeeting }: LeftSidebarPro
               Tips
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-2">
+          <CardContent className="pt-2 flex-1 min-h-0 overflow-hidden">
             <div className="space-y-1.5 text-[10px] text-slate-600 dark:text-slate-400">
               {['Quick actions check availability', 'Select participants for insights', 'Schedule from chat interface'].map((tip, index) => (
                 <motion.p
@@ -216,6 +217,7 @@ export function LeftSidebar({ onQuickAction, onScheduleMeeting }: LeftSidebarPro
           </CardContent>
         </Card>
       </motion.div>
+      </div>
     </div>
   );
 }
