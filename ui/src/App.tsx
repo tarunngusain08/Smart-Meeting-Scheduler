@@ -162,7 +162,7 @@ export default function App() {
                   <div className="w-full px-4 py-6">
                     <div className="flex flex-row gap-6 h-[calc(100vh-120px)] max-w-[2000px] mx-auto">
                       {/* Left Sidebar - Compact */}
-                      <aside className="w-56 xl:w-64 flex-shrink-0">
+                      <aside className="w-56 xl:w-64 flex-shrink-0" style={{ width: '18rem', minWidth: '11rem', maxWidth: '110rem' }}>
                         <LeftSidebar 
                           onQuickAction={(action) => {
                             if ((window as any).__chatInterfaceHandlers) {
@@ -186,8 +186,8 @@ export default function App() {
                         />
                       </main>
                       
-                      {/* Right Sidebar - Compact */}
-                      <aside className="w-72 xl:w-80 flex-shrink-0">
+                      {/* Right Sidebar - Compact (40% smaller total) */}
+                      <aside className="w-44 xl:w-52 flex-shrink-0" style={{ width: '25rem', minWidth: '11rem', maxWidth: '110rem' }}>
                         <Sidebar 
                           selectedParticipants={selectedParticipants}
                           nextMeeting={nextMeeting}
