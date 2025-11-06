@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Users, Calendar, Globe, Clock, Sparkles, Loader2 } from 'lucide-react';
+import { Users, Calendar, Globe, Clock, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { ScrollArea } from './ui/scroll-area';
 import { getAllUsers, userToParticipant, Participant } from '../api/users';
-import { handleUserPrompt } from '../api/chat';
+import { motion } from 'motion/react';
 
 interface SidebarProps {
   selectedParticipants: string[];
@@ -78,8 +78,41 @@ interface AIInsight {
 export function Sidebar({ selectedParticipants, nextMeeting }: SidebarProps) {
   const [availableParticipants, setAvailableParticipants] = useState<Participant[]>([]);
   const [currentUserTimezone, setCurrentUserTimezone] = useState<string>('Pacific Time (PT)');
-  const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
-  const [insightsLoading, setInsightsLoading] = useState(false);
+  // Static AI Insights - no dynamic generation
+  const staticInsights: AIInsight[] = [
+    {
+      id: 'insight-1',
+      type: 'best-time',
+      title: 'Best Meeting Time',
+      description: 'Tuesday and Wednesday afternoons typically have 85% higher attendance rates',
+      icon: <Clock className="h-4 w-4 text-blue-500" />,
+      color: 'blue',
+    },
+    {
+      id: 'insight-2',
+      type: 'timezone',
+      title: 'Time Zone Tip',
+      description: 'Schedule between 10 AM - 2 PM PT to accommodate most time zones comfortably',
+      icon: <Globe className="h-4 w-4 text-purple-500" />,
+      color: 'purple',
+    },
+    {
+      id: 'insight-3',
+      type: 'availability',
+      title: 'Team Availability',
+      description: 'Morning slots (9-11 AM) have better availability for cross-timezone teams',
+      icon: <Users className="h-4 w-4 text-emerald-500" />,
+      color: 'emerald',
+    },
+    {
+      id: 'insight-4',
+      type: 'productivity',
+      title: 'Productivity Tip',
+      description: 'Keep meetings under 50 minutes to allow buffer time between sessions',
+      icon: <Sparkles className="h-4 w-4 text-amber-500" />,
+      color: 'amber',
+    },
+  ];
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -115,163 +148,52 @@ export function Sidebar({ selectedParticipants, nextMeeting }: SidebarProps) {
     [availableParticipants, selectedParticipants]
   );
 
-  // Generate AI insights dynamically
-  useEffect(() => {
-    const generateInsights = async () => {
-      if (selected.length === 0) {
-        setAiInsights([]);
-        return;
-      }
-
-      setInsightsLoading(true);
-      try {
-        // Create a prompt for AI insights based on selected participants
-        const timezones = selected.map(p => p.timezone || 'Unknown').join(', ');
-        const participantNames = selected.map(p => p.name).join(', ');
-        
-        const prompt = `Given these ${selected.length} meeting participants: ${participantNames} with timezones: ${timezones}, generate 3-4 brief, actionable insights about:
-1. Best meeting times considering timezone differences
-2. Timezone coordination tips
-3. Team availability patterns
-4. Productivity recommendations
-
-Keep each insight under 100 characters. Format as short, practical tips.`;
-        
-        const aiResponse = await handleUserPrompt(prompt);
-        
-        // Parse AI response into insights
-        const insights = parseAIInsights(aiResponse, selected);
-        setAiInsights(insights);
-      } catch (error) {
-        console.error('Failed to generate AI insights:', error);
-        // Fallback to default insights if AI fails
-        setAiInsights(getDefaultInsights(selected));
-      } finally {
-        setInsightsLoading(false);
-      }
-    };
-
-    generateInsights();
-  }, [selected]);
-
-  // Helper to parse AI response into structured insights
-  const parseAIInsights = (response: string, participants: Participant[]): AIInsight[] => {
-    const insights: AIInsight[] = [];
-    const lines = response.split('\n').filter(line => line.trim().length > 20);
-    
-    const timezones = participants.map(p => getTimezoneDisplayName(p.timezone || '')).filter(Boolean);
-    const uniqueTimezones = [...new Set(timezones)];
-    
-    // Try to extract insights from AI response
-    lines.slice(0, 3).forEach((line, idx) => {
-      const cleanLine = line.replace(/^\d+[\.\)]\s*/, '').trim();
-      if (cleanLine.length > 20) {
-        insights.push({
-          id: `ai-${idx}`,
-          type: idx === 0 ? 'best-time' : idx === 1 ? 'timezone' : 'availability',
-          title: getInsightTitle(idx),
-          description: cleanLine,
-          icon: getInsightIcon(idx),
-          color: getInsightColor(idx),
-        });
-      }
-    });
-
-    // Fill with default insights if AI didn't provide enough
-    if (insights.length < 3) {
-      const defaultInsights = getDefaultInsights(participants);
-      insights.push(...defaultInsights.slice(insights.length));
-    }
-
-    return insights.slice(0, 4);
-  };
-
-  const getDefaultInsights = (participants: Participant[]): AIInsight[] => {
-    const timezones = participants.map(p => getTimezoneDisplayName(p.timezone || '')).filter(Boolean);
-    const uniqueTimezones = [...new Set(timezones)];
-    const timezoneText = uniqueTimezones.length > 0 ? uniqueTimezones.join(', ') : 'multiple timezones';
-    
-    return [
-      {
-        id: 'insight-1',
-        type: 'best-time',
-        title: 'Best Meeting Time',
-        description: `Tuesday afternoons have ${87 + Math.floor(Math.random() * 10)}% higher attendance rates`,
-        icon: <Clock className="h-4 w-4 text-blue-500" />,
-        color: 'blue',
-      },
-      {
-        id: 'insight-2',
-        type: 'timezone',
-        title: 'Time Zone Tip',
-        description: `Consider 10 AM PST to include ${timezoneText} comfortably`,
-        icon: <Globe className="h-4 w-4 text-purple-500" />,
-        color: 'purple',
-      },
-      {
-        id: 'insight-3',
-        type: 'availability',
-        title: 'Team Availability',
-        description: `${participants.length} participant${participants.length > 1 ? 's are' : ' is'} typically available tomorrow afternoon`,
-        icon: <Users className="h-4 w-4 text-emerald-500" />,
-        color: 'emerald',
-      },
-    ];
-  };
-
-  const getInsightTitle = (idx: number): string => {
-    const titles = ['Best Meeting Time', 'Time Zone Tip', 'Team Availability', 'Productivity Tip'];
-    return titles[idx] || 'Insight';
-  };
-
-  const getInsightIcon = (idx: number): React.ReactNode => {
-    const icons = [
-      <Clock className="h-4 w-4 text-blue-500" key="clock" />,
-      <Globe className="h-4 w-4 text-purple-500" key="globe" />,
-      <Users className="h-4 w-4 text-emerald-500" key="users" />,
-      <Sparkles className="h-4 w-4 text-amber-500" key="sparkles" />,
-    ];
-    return icons[idx] || icons[0];
-  };
-
-  const getInsightColor = (idx: number): string => {
-    const colors = ['blue', 'purple', 'emerald', 'amber'];
-    return colors[idx] || 'blue';
-  };
-
   return (
-    <div className="h-full flex flex-col gap-3 overflow-y-auto">
-      {/* Selected Participants */}
-      <Card className="border border-emerald-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-md">
-        <CardHeader className="pb-2">
+    <div className="h-full w-full overflow-y-auto" style={{ maxWidth: '100%' }}>
+      <div className="space-y-3 w-full" style={{ maxWidth: '100%' }}>
+      {/* Selected Participants - Fixed Height */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+      >
+      <Card className="border border-emerald-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-md hover:shadow-lg transition-all duration-300 w-full h-[280px] flex flex-col">
+        <CardHeader className="pb-2 flex-shrink-0">
           <CardTitle className="flex items-center gap-1.5 text-gray-900 dark:text-white text-sm">
-            <Users className="h-4 w-4 text-[#10B981]" />
+            <motion.div
+              whileHover={{ scale: 1.1 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Users className="h-4 w-4 text-[#10B981]" />
+            </motion.div>
             Selected Participants
           </CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-400 text-xs">
             {selected.length === 0 ? 'None selected' : `${selected.length} participant${selected.length > 1 ? 's' : ''}`}
           </CardDescription>
         </CardHeader>
-        <CardContent className="pt-2">
+        <CardContent className="pt-2 flex-1 min-h-0 overflow-hidden">
           {selected.length === 0 ? (
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Select participants from the scheduling widget.
-            </p>
+            <div className="flex items-center justify-center h-full">
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+                Select participants from the scheduling widget.
+              </p>
+            </div>
           ) : (
-            <ScrollArea className="max-h-[240px]">
-              <div className="space-y-2.5 pr-2">
+            <ScrollArea className="h-full w-full">
+              <div className="space-y-2.5 pr-2 w-full">
                 {selected.map((participant) => (
-                  <div key={participant.id} className="flex items-start gap-2">
+                  <div key={participant.id} className="flex items-start gap-2 w-full min-w-0">
                     <Avatar className="h-7 w-7 ring-1 ring-emerald-500 shadow-sm flex-shrink-0">
                       <AvatarImage src={participant.avatar} />
                       <AvatarFallback className="text-[10px]">{participant.name[0]}</AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 overflow-hidden">
                       <p className="text-xs font-medium text-slate-900 dark:text-white truncate">
                         {participant.name}
                       </p>
-                      <div className="flex items-center gap-1 flex-wrap mt-0.5">
-                        <span className="text-[10px] text-slate-500 dark:text-slate-400">{participant.role}</span>
+                      <div className="flex items-center gap-1 flex-wrap mt-0.5 max-w-full">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{participant.role}</span>
                         <Badge
                           variant="outline"
                           className={`text-[10px] py-0 px-1 h-4 ${
@@ -303,17 +225,28 @@ Keep each insight under 100 characters. Format as short, practical tips.`;
           )}
         </CardContent>
       </Card>
+      </motion.div>
 
-      {/* Next Meeting */}
+      {/* Next Meeting - Fixed Height */}
       {nextMeeting && (
-        <Card className="border border-emerald-400 dark:border-emerald-600 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-950 dark:to-teal-950 shadow-lg">
-          <CardHeader className="pb-2">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.05, ease: [0.4, 0, 0.2, 1] }}
+        >
+        <Card className="border border-emerald-400 dark:border-emerald-600 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-950 dark:to-teal-950 shadow-lg hover:shadow-xl transition-all duration-300 w-full h-[200px] flex flex-col">
+          <CardHeader className="pb-2 flex-shrink-0">
             <CardTitle className="flex items-center gap-1.5 text-gray-900 dark:text-white text-sm">
-              <Calendar className="h-4 w-4 text-[#10B981]" />
+              <motion.div
+                whileHover={{ rotate: 15, scale: 1.1 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Calendar className="h-4 w-4 text-[#10B981]" />
+              </motion.div>
               Next Meeting
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 pt-2">
+          <CardContent className="space-y-2 pt-2 flex-1 min-h-0 overflow-hidden">
             <div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Date & Time</p>
               <p className="text-xs text-slate-900 dark:text-white">
@@ -337,83 +270,98 @@ Keep each insight under 100 characters. Format as short, practical tips.`;
             </div>
           </CardContent>
         </Card>
+        </motion.div>
       )}
 
-      {/* AI Insights */}
-      <Card className="border border-emerald-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-md">
-        <CardHeader className="pb-2">
+      {/* AI Insights - Static Content */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: nextMeeting ? 0.1 : 0.05, ease: [0.4, 0, 0.2, 1] }}
+      >
+      <Card className="border border-emerald-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-md hover:shadow-lg transition-all duration-300 w-full h-[320px] flex flex-col">
+        <CardHeader className="pb-2 flex-shrink-0">
           <CardTitle className="flex items-center gap-1.5 text-gray-900 dark:text-white text-sm">
-            <Sparkles className="h-4 w-4 text-[#10B981]" />
+            <motion.div
+              animate={{ 
+                scale: [1, 1.15, 1],
+                rotate: [0, 8, -8, 0]
+              }}
+              transition={{ 
+                duration: 2.5,
+                repeat: Infinity,
+                repeatDelay: 4
+              }}
+            >
+              <Sparkles className="h-4 w-4 text-[#10B981]" />
+            </motion.div>
             AI Insights
-            {insightsLoading && (
-              <Loader2 className="h-3 w-3 ml-auto animate-spin text-[#10B981]" />
-            )}
           </CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-400 text-xs">
-            {selected.length > 0 
-              ? `For ${selected.length} participant${selected.length > 1 ? 's' : ''}`
-              : 'Select participants'}
+            Smart scheduling tips
           </CardDescription>
         </CardHeader>
-        <CardContent className="pt-2">
-          {selected.length === 0 ? (
-            <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-3">
-              Select participants to see insights.
-            </p>
-          ) : insightsLoading ? (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-[#10B981]" />
-              <span className="ml-2 text-xs text-slate-600 dark:text-slate-400">
-                Generating...
-              </span>
-            </div>
-          ) : aiInsights.length > 0 ? (
-            <div className="space-y-2">
-              {aiInsights.map((insight) => {
-                const colorClasses = {
-                  blue: 'bg-blue-50 dark:bg-blue-950/30 border-blue-200/50 dark:border-blue-800/50',
-                  purple: 'bg-purple-50 dark:bg-purple-950/30 border-purple-200/50 dark:border-purple-800/50',
-                  emerald: 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200/50 dark:border-emerald-800/50',
-                  amber: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200/50 dark:border-amber-800/50',
-                };
-                
-                return (
-                  <div
-                    key={insight.id}
-                    className={`flex items-start gap-2 p-2 rounded-md border transition-all hover:shadow-sm ${colorClasses[insight.color as keyof typeof colorClasses] || colorClasses.blue}`}
+        <CardContent className="pt-2 flex-1 min-h-0 overflow-y-auto">
+          <div className="space-y-2 w-full">
+            {staticInsights.map((insight, index) => {
+              const colorClasses = {
+                blue: 'bg-blue-50 dark:bg-blue-950/30 border-blue-200/50 dark:border-blue-800/50',
+                purple: 'bg-purple-50 dark:bg-purple-950/30 border-purple-200/50 dark:border-purple-800/50',
+                emerald: 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200/50 dark:border-emerald-800/50',
+                amber: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200/50 dark:border-amber-800/50',
+              };
+              
+              return (
+                <motion.div
+                  key={insight.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3, delay: (nextMeeting ? 0.15 : 0.1) + index * 0.05 }}
+                  whileHover={{ scale: 1.02, x: 3 }}
+                  className={`flex items-start gap-2 p-2 rounded-md border transition-all hover:shadow-md w-full min-w-0 ${colorClasses[insight.color as keyof typeof colorClasses] || colorClasses.blue}`}
+                >
+                  <motion.div 
+                    className="mt-0.5 flex-shrink-0"
+                    whileHover={{ scale: 1.2, rotate: 5 }}
+                    transition={{ duration: 0.2 }}
                   >
-                    <div className="mt-0.5 flex-shrink-0">
-                      {insight.icon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-slate-900 dark:text-white">
-                        {insight.title}
-                      </p>
-                      <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-0.5">
-                        {insight.description}
-                      </p>
-                    </div>
+                    {insight.icon}
+                  </motion.div>
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <p className="text-xs font-medium text-slate-900 dark:text-white">
+                      {insight.title}
+                    </p>
+                    <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed whitespace-normal">
+                      {insight.description}
+                    </p>
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-3">
-              No insights available.
-            </p>
-          )}
+                </motion.div>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
+      </motion.div>
 
-      {/* Timezone */}
-      <Card className="border border-gray-300/50 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 shadow-md">
-        <CardHeader className="pb-2">
+      {/* Timezone - Fixed Height */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: nextMeeting ? 0.15 : 0.1, ease: [0.4, 0, 0.2, 1] }}
+      >
+      <Card className="border border-gray-300/50 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 shadow-md hover:shadow-lg transition-all duration-300 w-full h-[140px] flex flex-col">
+        <CardHeader className="pb-2 flex-shrink-0">
           <CardTitle className="flex items-center gap-1.5 text-gray-900 dark:text-white text-sm">
-            <Globe className="h-4 w-4 text-blue-500" />
+            <motion.div
+              whileHover={{ scale: 1.2, rotate: 180 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Globe className="h-4 w-4 text-blue-500" />
+            </motion.div>
             Time Zone
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-2">
+        <CardContent className="pt-2 flex-1 min-h-0 overflow-hidden">
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
               <span className="text-xs text-slate-600 dark:text-slate-400">Your timezone:</span>
@@ -426,6 +374,8 @@ Keep each insight under 100 characters. Format as short, practical tips.`;
           </div>
         </CardContent>
       </Card>
+      </motion.div>
+      </div>
     </div>
   );
 }
