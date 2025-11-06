@@ -46,3 +46,11 @@ __pycache__/
 # Temporary files
 *.tmp
 *.temp
+
+# env files
+*.env
+**/env.env
+.env
+.env.*
+backend/env.env
+ui/env.env
