@@ -62,13 +62,19 @@ type CreateMeetingRequest struct {
 }
 
 // FindMeetingTimesRequest represents a request to find available meeting times
+type AttendeeWithTimezone struct {
+	Email    string `json:"email" binding:"required"`
+	TimeZone string `json:"timezone,omitempty"`
+}
+
 type FindMeetingTimesRequest struct {
-	Attendees      []string  `json:"Attendees" binding:"required"`
-	Duration       int       `json:"Duration" binding:"required"` // in minutes
-	StartTime      time.Time `json:"StartTime" binding:"required"`
-	EndTime        time.Time `json:"EndTime" binding:"required"`
-	TimeZone       string    `json:"TimeZone,omitempty"`
-	MaxSuggestions int       `json:"MaxSuggestions,omitempty"`
+	Attendees         []AttendeeWithTimezone `json:"Attendees" binding:"required"`
+	PriorityAttendees []AttendeeWithTimezone `json:"PriorityAttendees,omitempty"`
+	Duration          int                    `json:"Duration" binding:"required"` // in minutes
+	StartTime         time.Time              `json:"StartTime" binding:"required"`
+	EndTime           time.Time              `json:"EndTime" binding:"required"`
+	TimeZone          string                 `json:"TimeZone,omitempty"` // Organizer's timezone
+	MaxSuggestions    int                    `json:"MaxSuggestions,omitempty"`
 }
 
 // MeetingTimesResponse represents the response for finding meeting times
