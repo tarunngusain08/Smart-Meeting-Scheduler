@@ -97,15 +97,22 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
     const lowerInput = userInput.toLowerCase();
     const lowerResponse = aiResponse.toLowerCase();
     
-    // Check if AI suggests showing schedule widget
-    const shouldShowScheduleWidget = 
-      lowerInput.includes('schedule') || 
-      lowerInput.includes('meeting') ||
-      lowerResponse.includes('schedule') ||
-      lowerResponse.includes('meeting');
+    // Only show schedule widget if user explicitly asks to schedule or check availability
+    // Be more specific - look for action words combined with schedule/meeting keywords
+    const isScheduleRequest = 
+      (lowerInput.includes('schedule') && (lowerInput.includes('meeting') || lowerInput.includes('a meeting') || lowerInput.includes('call'))) ||
+      (lowerInput.includes('book') && lowerInput.includes('meeting')) ||
+      (lowerInput.includes('set up') && lowerInput.includes('meeting')) ||
+      (lowerInput.includes('arrange') && lowerInput.includes('meeting')) ||
+      (lowerInput.includes('create') && lowerInput.includes('meeting'));
     
-    // Check if AI is providing time slots (this would need to be parsed from structured response)
-    // For now, we'll use the AI response as-is
+    // Check if it's an availability check request
+    const isAvailabilityRequest = 
+      lowerInput.includes('check availability') ||
+      lowerInput.includes('find time') ||
+      lowerInput.includes('available slot') ||
+      lowerInput.includes('free time');
+    
     const message: Message = {
       id: Date.now().toString(),
       type: 'ai',
@@ -113,8 +120,9 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
       timestamp: new Date(),
     };
 
-    // Add schedule widget if appropriate
-    if (shouldShowScheduleWidget && !lowerResponse.includes('slot')) {
+    // Only add schedule widget if it's an explicit scheduling or availability request
+    // AND the response doesn't already contain slots
+    if ((isScheduleRequest || isAvailabilityRequest) && !lowerResponse.includes('slot')) {
       message.showScheduleWidget = true;
       message.scheduleWidgetActive = true;
     }
@@ -131,22 +139,109 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
       }))
     );
 
+    // Extract data from the schedule widget
+    const { title, duration, participants, startDate, endDate, meetingHeadline, agenda, priorityAttendees, participantsWithTimezone } = data;
+
+    // Immediate acknowledgment message with typing animation
+    const acknowledgmentMessageId = `ack-${Date.now()}`;
+    const acknowledgmentMessage: Message = {
+      id: acknowledgmentMessageId,
+      type: 'ai',
+      content: '',
+      timestamp: new Date(),
+      isSearching: true, // Special flag for search animation
+    };
+    setMessages((prev) => [...prev, acknowledgmentMessage]);
+
+    // Start typing animation
     setIsTyping(true);
-    try {
-      // Extract data from the schedule widget
-      const { title, duration, participants, startDate, endDate, meetingHeadline, agenda, priorityAttendees } = data;
+    
+    // Search quotes to rotate through
+    const searchQuotes = [
+      `🔍 Analyzing calendars for all ${participants.length} attendees...`,
+      `⏰ Checking timezone compatibility (${participantsWithTimezone?.[0]?.timezone || 'multiple timezones'})...`,
+      `📅 Scanning availability across the date range...`,
+      priorityAttendees && priorityAttendees.length > 0 
+        ? `⭐ Prioritizing availability for ${priorityAttendees.length} key attendee${priorityAttendees.length > 1 ? 's' : ''}...`
+        : `🎯 Finding slots where everyone is available...`,
+      `🧠 Using AI to optimize meeting suggestions...`,
+      `✨ Considering working hours and preferences...`,
+      `🔄 Broadening search across the entire week...`,
+      `📊 Calculating best time slots with highest attendance...`,
+    ];
+
+    let currentQuoteIndex = 0;
+    let currentText = '';
+    let isTyping = true;
+    let charIndex = 0;
+
+    // Character-by-character typing and deleting animation
+    const typeInterval = setInterval(() => {
+      const targetQuote = searchQuotes[currentQuoteIndex];
       
+      if (isTyping) {
+        // Typing phase
+        if (charIndex < targetQuote.length) {
+          currentText = targetQuote.substring(0, charIndex + 1);
+          charIndex++;
+        } else {
+          // Hold the complete text for a moment
+          setTimeout(() => {
+            isTyping = false;
+            charIndex = targetQuote.length;
+          }, 2000); // Hold for 2 seconds
+          return;
+        }
+      } else {
+        // Deleting phase
+        if (charIndex > 0) {
+          currentText = targetQuote.substring(0, charIndex - 1);
+          charIndex--;
+        } else {
+          // Move to next quote
+          isTyping = true;
+          currentQuoteIndex = (currentQuoteIndex + 1) % searchQuotes.length;
+          currentText = '';
+        }
+      }
+
+      // Update the message
+      setMessages((prev) => {
+        const newMessages = [...prev];
+        const msgIndex = newMessages.findIndex(m => m.id === acknowledgmentMessageId);
+        if (msgIndex !== -1) {
+          newMessages[msgIndex] = {
+            ...newMessages[msgIndex],
+            content: currentText,
+          };
+        }
+        return newMessages;
+      });
+    }, 50); // 50ms per character for smooth animation
+
+    try {
       // Use the new findMeetingTimes API
       const startTime = startDate || new Date();
       const endTime = endDate || addDays(startTime, 7);
       
+      // Ensure we have AttendeeWithTimezone format, fallback to converting string[] if needed
+      const attendeesFormatted = participantsWithTimezone || 
+        (Array.isArray(participants) ? participants.map((p: string) => ({ email: p })) : []);
+      
       const response = await findMeetingTimes({
-        Attendees: participants,
+        Attendees: attendeesFormatted,
+        PriorityAttendees: priorityAttendees, // Already includes timezone data
         Duration: duration || 60,
         StartTime: startTime.toISOString(),
         EndTime: endTime.toISOString(),
         MaxSuggestions: 5,
       });
+
+      // Clear the typing animation
+      clearInterval(typeInterval);
+
+      // Remove the acknowledgment message and show results
+      setMessages((prev) => prev.filter(msg => msg.id !== acknowledgmentMessageId));
 
       if (response.suggestions.length > 0) {
         // Format suggestions for display
@@ -173,7 +268,7 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
         const aiMessage: Message = {
           id: Date.now().toString(),
           type: 'ai',
-          content: `Great! I've found ${slots.length} available time slots for ${participants.length} participant(s). Here are my top recommendations:`,
+          content: `Perfect! I've analyzed ${participants.length} calendar${participants.length > 1 ? 's' : ''} and found ${slots.length} optimal time slots${priorityAttendees && priorityAttendees.length > 0 ? ` (prioritizing ${priorityAttendees.length} key attendee${priorityAttendees.length > 1 ? 's' : ''})` : ''}. Here are my top recommendations:`,
           timestamp: new Date(),
           slots,
         };
@@ -182,17 +277,22 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
         const aiMessage: Message = {
           id: Date.now().toString(),
           type: 'ai',
-          content: response.message || 'Sorry, I couldn\'t find any available time slots for all participants in the specified time range. Would you like to try a different time range?',
+          content: response.message || `I've searched thoroughly but couldn't find any time slots where all ${participants.length} participants are available in the specified date range. Would you like to try a different time range or consider optional attendees?`,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, aiMessage]);
       }
     } catch (error) {
       console.error('Error finding meeting times:', error);
+      clearInterval(typeInterval);
+      
+      // Remove acknowledgment message
+      setMessages((prev) => prev.filter(msg => msg.id === acknowledgmentMessageId));
+      
       const errorMessage: Message = {
         id: Date.now().toString(),
         type: 'ai',
-        content: `Sorry, I encountered an error while finding available times: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+        content: `Sorry, I encountered an error while searching for available times: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
