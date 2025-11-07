@@ -24,10 +24,11 @@ type TimeSlot struct {
 
 // AvailabilityResponse represents the response for availability check
 type AvailabilityResponse struct {
-	UserEmail      string     `json:"userEmail"`
-	FreeSlots      []TimeSlot `json:"freeSlots"`
-	BusySlots      []TimeSlot `json:"busySlots"`
-	WorkingHours   TimeSlot   `json:"workingHours"`
-	TotalFreeTime  int        `json:"totalFreeTimeMinutes"`
-	TotalBusyTime  int        `json:"totalBusyTimeMinutes"`
+	UserEmail          string     `json:"userEmail"`
+	FreeSlots          []TimeSlot `json:"freeSlots"`          // Standard hours slots (9am-6pm)
+	ExtendedHoursSlots []TimeSlot `json:"extendedHoursSlots"` // Extended hours slots (7-9am, 6-11pm)
+	BusySlots          []TimeSlot `json:"busySlots"`
+	WorkingHours       TimeSlot   `json:"workingHours"`
+	TotalFreeTime      int        `json:"totalFreeTimeMinutes"`
+	TotalBusyTime      int        `json:"totalBusyTimeMinutes"`
 }
