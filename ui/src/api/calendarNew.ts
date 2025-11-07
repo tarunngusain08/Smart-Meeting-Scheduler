@@ -122,6 +122,9 @@ export async function checkAvailability(
   startTime: Date,
   endTime: Date
 ): Promise<AvailabilityResponse> {
+  // Get user's timezone (IANA format)
+  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  
   const response = await fetch(`${API_BASE}/calendar/availability`, {
     method: 'POST',
     credentials: 'include',
@@ -132,12 +135,18 @@ export async function checkAvailability(
       email,
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
+      timeZone: userTimezone, // Pass user's IANA timezone
     }),
   });
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to check availability');
+    const errorMessage = new Error(error.message || error.error || 'Failed to check availability');
+    (errorMessage as any).response = {
+      status: response.status,
+      data: error,
+    };
+    throw errorMessage;
   }
 
   return response.json();
@@ -221,6 +230,9 @@ export async function checkQuickAvailability(
   let startTime: Date;
   let endTime: Date;
   let rangeLabel: string;
+  
+  // Get user's timezone (IANA format)
+  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone; // e.g., "Asia/Kolkata"
 
   switch (timeRange) {
     case 'today':
