@@ -25,4 +25,7 @@ type GraphClient interface {
 
 	// GetAvailability checks availability for a user within a time range
 	GetAvailability(userEmail string, startTime, endTime time.Time) (models.AvailabilityResponse, error)
+	
+	// GetAvailabilityWithTimezone checks availability with timezone-aware working hours filtering
+	GetAvailabilityWithTimezone(userEmail string, startTime, endTime time.Time, timezone string) (models.AvailabilityResponse, error)
 }
