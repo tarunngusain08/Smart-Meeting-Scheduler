@@ -450,9 +450,38 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
         timeRange = 'tomorrow';
       }
       
-      // Get user email from session/context (for now, use a placeholder)
-      // In production, this should come from auth context
-      const userEmail = 'user@example.com'; // TODO: Get from auth context
+      // Get logged-in user email from localStorage
+      const userStr = localStorage.getItem('user');
+      if (!userStr) {
+        const errorMessage: Message = {
+          id: Date.now().toString(),
+          type: 'ai',
+          content: '❌ **Authentication Error**\n\nPlease log in to check your availability. Your session may have expired.',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+        setIsTyping(false);
+        return;
+      }
+
+      let userEmail: string;
+      try {
+        const userData = JSON.parse(userStr);
+        userEmail = userData.email || userData.userPrincipalName;
+        if (!userEmail) {
+          throw new Error('No email found in user data');
+        }
+      } catch (error) {
+        const errorMessage: Message = {
+          id: Date.now().toString(),
+          type: 'ai',
+          content: '❌ **Authentication Error**\n\nUnable to retrieve your email. Please log in again.',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+        setIsTyping(false);
+        return;
+      }
       
       // Call the new API
       const response = await checkQuickAvailabilityNew(
@@ -466,38 +495,50 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
       
       const { availability, suggestions } = response;
       
+      // Ensure arrays exist (handle null/undefined)
+      const freeSlots = availability.freeSlots || [];
+      const busySlots = availability.busySlots || [];
+      
       // Show free slots
-      if (availability.freeSlots.length > 0) {
-        content += `✅ **Available Slots** (${availability.freeSlots.length} found):\n`;
-        availability.freeSlots.slice(0, 5).forEach((slot, index) => {
+      if (freeSlots.length > 0) {
+        content += `✅ **Available Slots** (${freeSlots.length} found):\n`;
+        freeSlots.slice(0, 5).forEach((slot, index) => {
           const start = new Date(slot.start);
           const end = new Date(slot.end);
           const startTime = format(start, 'EEE, MMM d • h:mm a');
           const endTime = format(end, 'h:mm a');
           content += `${index + 1}. ${startTime} - ${endTime}\n`;
         });
-        if (availability.freeSlots.length > 5) {
-          content += `\n_...and ${availability.freeSlots.length - 5} more slots_\n`;
+        if (freeSlots.length > 5) {
+          content += `\n_...and ${freeSlots.length - 5} more slots_\n`;
         }
+      } else {
+        content += `⚠️ **No Available Slots Found**\n\n`;
+        if (busySlots.length > 0) {
+          content += `You have ${busySlots.length} meeting${busySlots.length > 1 ? 's' : ''} scheduled during this period. `;
+        } else {
+          content += `This appears to be a weekend or outside working hours. `;
+        }
+        content += `Consider checking a different time range or adjusting your schedule.`;
       }
       
       // Show busy slots
-      if (availability.busySlots.length > 0) {
-        content += `\n🔴 **Busy Times** (${availability.busySlots.length} scheduled):\n`;
-        availability.busySlots.slice(0, 3).forEach((slot, index) => {
+      if (busySlots.length > 0) {
+        content += `\n🔴 **Busy Times** (${busySlots.length} scheduled):\n`;
+        busySlots.slice(0, 3).forEach((slot, index) => {
           const start = new Date(slot.start);
           const end = new Date(slot.end);
           const startTime = format(start, 'EEE, MMM d • h:mm a');
           const endTime = format(end, 'h:mm a');
           content += `${index + 1}. ${startTime} - ${endTime}\n`;
         });
-        if (availability.busySlots.length > 3) {
-          content += `\n_...and ${availability.busySlots.length - 3} more_\n`;
+        if (busySlots.length > 3) {
+          content += `\n_...and ${busySlots.length - 3} more_\n`;
         }
       }
       
       // Show meeting suggestions if attendees were provided
-      if (suggestions && suggestions.length > 0) {
+      if (suggestions && Array.isArray(suggestions) && suggestions.length > 0) {
         content += `\n\n💡 **Best Meeting Times** (for ${selectedParticipants.length} attendees):\n`;
         suggestions.slice(0, 3).forEach((suggestion, index) => {
           const start = new Date(suggestion.start);
@@ -511,8 +552,8 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
       
       // Summary
       content += `\n📊 **Summary:**\n`;
-      content += `• Free time: ${availability.totalFreeTimeMinutes} minutes\n`;
-      content += `• Busy time: ${availability.totalBusyTimeMinutes} minutes\n`;
+      content += `• Free time: ${availability.totalFreeTimeMinutes || 0} minutes\n`;
+      content += `• Busy time: ${availability.totalBusyTimeMinutes || 0} minutes\n`;
       
       const aiMessage: Message = {
         id: Date.now().toString(),
@@ -522,12 +563,24 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
       };
       setMessages((prev) => [...prev, aiMessage]);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error checking quick availability:', error);
+      let errorContent = '❌ **Error Checking Availability**\n\n';
+      
+      if (error?.message?.includes('Failed to check availability') || error?.response?.status === 500) {
+        errorContent += 'Unable to retrieve your calendar data. Please try again or check your connection.';
+      } else if (error?.response?.status === 400 && error?.response?.data?.message) {
+        errorContent += error.response.data.message;
+      } else if (error?.message?.includes('Authentication') || error?.response?.status === 401) {
+        errorContent += 'Your session may have expired. Please log in again.';
+      } else {
+        errorContent += error?.message || 'An unexpected error occurred. Please try again.';
+      }
+      
       const errorMessage: Message = {
         id: Date.now().toString(),
         type: 'ai',
-        content: `❌ Sorry, I encountered an error checking availability: ${error instanceof Error ? error.message : 'Unknown error'}. Please make sure you're logged in and try again.`,
+        content: errorContent,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
