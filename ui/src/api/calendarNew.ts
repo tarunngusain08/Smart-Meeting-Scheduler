@@ -30,6 +30,7 @@ export interface TimeSlot {
 export interface AvailabilityResponse {
   userEmail: string;
   freeSlots: TimeSlot[];
+  extendedHoursSlots?: TimeSlot[]; // Extended hours slots (7-9am, 6-11pm)
   busySlots: TimeSlot[];
   workingHours: TimeSlot;
   totalFreeTimeMinutes: number;
