@@ -24,6 +24,8 @@ interface Message {
   showScheduleWidget?: boolean;
   showAvailability?: boolean;
   scheduleWidgetActive?: boolean; // Track if this widget is active
+  showExtendedHoursPrompt?: boolean; // Show prompt for extended hours
+  extendedHoursSlots?: any[]; // Extended hours slots to display
 }
 
 interface ChatInterfaceProps {
@@ -497,9 +499,10 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
       
       // Ensure arrays exist (handle null/undefined)
       const freeSlots = availability.freeSlots || [];
+      const extendedHoursSlots = availability.extendedHoursSlots || [];
       const busySlots = availability.busySlots || [];
       
-      // Show free slots
+      // Show free slots (standard hours)
       if (freeSlots.length > 0) {
         content += `✅ **Available Slots** (${freeSlots.length} found):\n`;
         freeSlots.slice(0, 5).forEach((slot, index) => {
@@ -513,13 +516,34 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
           content += `\n_...and ${freeSlots.length - 5} more slots_\n`;
         }
       } else {
-        content += `⚠️ **No Available Slots Found**\n\n`;
+        content += `⚠️ **No Available Slots Found During Working Hours**\n\n`;
         if (busySlots.length > 0) {
           content += `You have ${busySlots.length} meeting${busySlots.length > 1 ? 's' : ''} scheduled during this period. `;
         } else {
           content += `This appears to be a weekend or outside working hours. `;
         }
-        content += `Consider checking a different time range or adjusting your schedule.`;
+        
+        // Check if extended hours slots are available
+        if (extendedHoursSlots.length > 0) {
+          content += `\n\n💡 **Extended Hours Available**\n\n`;
+          content += `I found ${extendedHoursSlots.length} available slot${extendedHoursSlots.length > 1 ? 's' : ''} outside standard working hours (7-9 AM and 6-11 PM). `;
+          content += `Would you like to see these extended hours slots?`;
+          
+          // Store extended hours slots in message for later display
+          const aiMessage: Message = {
+            id: Date.now().toString(),
+            type: 'ai',
+            content,
+            timestamp: new Date(),
+            showExtendedHoursPrompt: true,
+            extendedHoursSlots: extendedHoursSlots,
+          };
+          setMessages((prev) => [...prev, aiMessage]);
+          setIsTyping(false);
+          return;
+        } else {
+          content += `Consider checking a different time range or adjusting your schedule.`;
+        }
       }
       
       // Show busy slots
@@ -589,6 +613,41 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
     }
   };
 
+  // Handle showing extended hours slots
+  const handleShowExtendedHours = (messageId: string, extendedSlots: any[]) => {
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.id === messageId) {
+          // Update message to show extended hours slots
+          let content = msg.content.replace(
+            /Would you like to see these extended hours slots\?/,
+            'Here are the extended hours slots:\n\n'
+          );
+          
+          content += `✅ **Extended Hours Slots** (${extendedSlots.length} found):\n`;
+          extendedSlots.slice(0, 10).forEach((slot, index) => {
+            const start = new Date(slot.start);
+            const end = new Date(slot.end);
+            const startTime = format(start, 'EEE, MMM d • h:mm a');
+            const endTime = format(end, 'h:mm a');
+            content += `${index + 1}. ${startTime} - ${endTime}\n`;
+          });
+          if (extendedSlots.length > 10) {
+            content += `\n_...and ${extendedSlots.length - 10} more slots_\n`;
+          }
+          
+          return {
+            ...msg,
+            content,
+            showExtendedHoursPrompt: false,
+            extendedHoursSlots: undefined,
+          };
+        }
+        return msg;
+      })
+    );
+  };
+
   // Handle schedule meeting trigger from external component
   const triggerScheduleMeeting = () => {
     const scheduleMessage: Message = {
@@ -633,6 +692,37 @@ export function ChatInterface({ selectedParticipants, setSelectedParticipants, o
                 }}
               >
                 <ChatMessage message={message} />
+                
+                {/* Extended Hours Prompt Buttons */}
+                {message.showExtendedHoursPrompt && message.extendedHoursSlots && message.extendedHoursSlots.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3, duration: 0.3 }}
+                    className="mt-3 flex gap-3"
+                  >
+                    <button
+                      onClick={() => handleShowExtendedHours(message.id, message.extendedHoursSlots!)}
+                      className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg"
+                    >
+                      Yes, Show Extended Hours
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMessages((prev) =>
+                          prev.map((msg) =>
+                            msg.id === message.id
+                              ? { ...msg, showExtendedHoursPrompt: false }
+                              : msg
+                          )
+                        );
+                      }}
+                      className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-slate-600 dark:hover:bg-slate-500 text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-colors"
+                    >
+                      No, Thanks
+                    </button>
+                  </motion.div>
+                )}
                 
                 {message.showScheduleWidget && (
                   <motion.div
