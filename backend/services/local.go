@@ -12,7 +12,7 @@ import (
 
 // MockGraphClient implements GraphClient using local Postgres database
 type MockGraphClient struct {
-	DB                *sql.DB
+	DB                  *sql.DB
 	TeamsMeetingBaseURL string
 }
 
@@ -22,38 +22,56 @@ func NewMockGraphClient(db *sql.DB, teamsMeetingBaseURL string) *MockGraphClient
 }
 
 // GetCalendarView retrieves calendar events for a user within a time range from local DB
+// Includes events where user is organizer OR attendee
 func (m *MockGraphClient) GetCalendarView(userIdentifier string, startTime, endTime time.Time) ([]models.Event, error) {
-	// First, try to resolve the userIdentifier to a user ID
+	// First, try to resolve the userIdentifier to a user ID or email
 	// It could be a display name, email, or UUID
+	var userEmail string
 	var userID string
 
 	// Check if it's already a UUID (user ID)
 	if len(userIdentifier) == 36 && strings.Contains(userIdentifier, "-") {
 		userID = userIdentifier
+		// Try to get email from users table
+		userQuery := `
+			SELECT COALESCE(email, user_principal_name, display_name) FROM users
+			WHERE id = $1
+			LIMIT 1
+		`
+		err := m.DB.QueryRow(userQuery, userID).Scan(&userEmail)
+		if err != nil {
+			// If not found, use the ID as-is
+			userEmail = userID
+		}
 	} else {
 		// Try to find user by email or display name
 		userQuery := `
-			SELECT id FROM users
+			SELECT id, COALESCE(email, user_principal_name, display_name) FROM users
 			WHERE email = $1 OR display_name = $1 OR user_principal_name = $1
 			LIMIT 1
 		`
-		err := m.DB.QueryRow(userQuery, userIdentifier).Scan(&userID)
+		err := m.DB.QueryRow(userQuery, userIdentifier).Scan(&userID, &userEmail)
 		if err != nil {
-			// If not found, assume it's already a user ID or return empty
+			// If not found in users table, use the identifier as email directly
+			userEmail = userIdentifier
 			userID = userIdentifier
 		}
 	}
 
+	// Query events where user is organizer OR attendee (case-insensitive)
 	query := `
-		SELECT id, subject, start_time, end_time, organizer, location, is_online, online_url
-		FROM mock_events
-		WHERE organizer = $1
-		  AND start_time < $3
-		  AND end_time > $2
-		ORDER BY start_time ASC
+		SELECT DISTINCT e.id, e.subject, e.start_time, e.end_time, e.organizer, 
+		       e.location, e.is_online, e.online_url
+		FROM mock_events e
+		LEFT JOIN mock_event_attendees ea ON e.id = ea.event_id
+		WHERE (LOWER(e.organizer) = LOWER($1) OR LOWER(e.organizer) = LOWER($4) 
+		       OR LOWER(ea.attendee_email) = LOWER($1) OR LOWER(ea.attendee_email) = LOWER($4))
+		  AND e.start_time < $3
+		  AND e.end_time > $2
+		ORDER BY e.start_time ASC
 	`
 
-	rows, err := m.DB.Query(query, userID, startTime, endTime)
+	rows, err := m.DB.Query(query, userEmail, startTime, endTime, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query events: %v", err)
 	}
@@ -258,8 +276,13 @@ func (m *MockGraphClient) CreateCalendarEvent(organizer string, event models.Cre
 	}, nil
 }
 
-// GetAvailability checks availability for a user within a time range
+// GetAvailability checks availability for a user within a time range (UTC working hours)
 func (m *MockGraphClient) GetAvailability(userEmail string, startTime, endTime time.Time) (models.AvailabilityResponse, error) {
+	return m.GetAvailabilityWithTimezone(userEmail, startTime, endTime, "")
+}
+
+// GetAvailabilityWithTimezone checks availability with timezone-aware working hours filtering
+func (m *MockGraphClient) GetAvailabilityWithTimezone(userEmail string, startTime, endTime time.Time, timezone string) (models.AvailabilityResponse, error) {
 	events, err := m.GetCalendarView(userEmail, startTime, endTime)
 	if err != nil {
 		return models.AvailabilityResponse{}, err
@@ -273,7 +296,8 @@ func (m *MockGraphClient) GetAvailability(userEmail string, startTime, endTime t
 		})
 	}
 
-	freeSlots := calculateFreeSlots(startTime, endTime, busySlots)
+	// Calculate free slots filtered by working hours in the specified timezone
+	freeSlots := calculateFreeSlots(startTime, endTime, busySlots, timezone)
 
 	totalBusyTime := 0
 	for _, slot := range busySlots {
@@ -285,13 +309,29 @@ func (m *MockGraphClient) GetAvailability(userEmail string, startTime, endTime t
 		totalFreeTime += int(slot.End.Sub(slot.Start).Minutes())
 	}
 
+	// Determine actual working hours based on free slots
+	workingHoursStart := startTime
+	workingHoursEnd := endTime
+	if len(freeSlots) > 0 {
+		workingHoursStart = freeSlots[0].Start
+		workingHoursEnd = freeSlots[len(freeSlots)-1].End
+	}
+
+	// Ensure arrays are never nil (return empty slices)
+	if freeSlots == nil {
+		freeSlots = []models.TimeSlot{}
+	}
+	if busySlots == nil {
+		busySlots = []models.TimeSlot{}
+	}
+
 	return models.AvailabilityResponse{
 		UserEmail: userEmail,
 		FreeSlots: freeSlots,
 		BusySlots: busySlots,
 		WorkingHours: models.TimeSlot{
-			Start: startTime,
-			End:   endTime,
+			Start: workingHoursStart,
+			End:   workingHoursEnd,
 		},
 		TotalFreeTime: totalFreeTime,
 		TotalBusyTime: totalBusyTime,
@@ -326,8 +366,8 @@ func (m *MockGraphClient) findCommonFreeSlots(busySlots map[string][]models.Time
 		allBusySlots = append(allBusySlots, slots...)
 	}
 
-	// Calculate free slots
-	freeSlots := calculateFreeSlots(startTime, endTime, allBusySlots)
+	// Calculate free slots (no timezone filtering for FindMeetingTimes)
+	freeSlots := calculateFreeSlots(startTime, endTime, allBusySlots, "")
 
 	// Find slots that fit the duration
 	var suggestions []models.MeetingSuggestion
