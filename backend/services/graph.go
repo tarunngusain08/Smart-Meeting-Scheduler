@@ -72,7 +72,7 @@ func (c *GraphAPIClient) GetCalendarView(userEmail string, startTime, endTime ti
 	for _, item := range calendarView.GetValue() {
 		start, _ := time.Parse(time.RFC3339, *item.GetStart().GetDateTime())
 		end, _ := time.Parse(time.RFC3339, *item.GetEnd().GetDateTime())
-		
+
 		organizer := ""
 		if item.GetOrganizer() != nil && item.GetOrganizer().GetEmailAddress() != nil {
 			organizer = *item.GetOrganizer().GetEmailAddress().GetAddress()
@@ -227,7 +227,7 @@ func (c *GraphAPIClient) FindMeetingTimes(organizer string, attendees []string, 
 	for _, s := range resp.GetMeetingTimeSuggestions() {
 		start, _ := time.Parse(time.RFC3339, *s.GetMeetingTimeSlot().GetStart().GetDateTime())
 		end, _ := time.Parse(time.RFC3339, *s.GetMeetingTimeSlot().GetEnd().GetDateTime())
-		
+
 		confidence := 0.0
 		if s.GetConfidence() != nil {
 			confidence = float64(*s.GetConfidence())
@@ -344,8 +344,13 @@ func (c *GraphAPIClient) CreateCalendarEvent(organizer string, event models.Crea
 	}, nil
 }
 
-// GetAvailability checks availability for a user within a time range
+// GetAvailability checks availability for a user within a time range (UTC working hours)
 func (c *GraphAPIClient) GetAvailability(userEmail string, startTime, endTime time.Time) (models.AvailabilityResponse, error) {
+	return c.GetAvailabilityWithTimezone(userEmail, startTime, endTime, "")
+}
+
+// GetAvailabilityWithTimezone checks availability with timezone-aware working hours filtering
+func (c *GraphAPIClient) GetAvailabilityWithTimezone(userEmail string, startTime, endTime time.Time, timezone string) (models.AvailabilityResponse, error) {
 	// Get calendar events
 	events, err := c.GetCalendarView(userEmail, startTime, endTime)
 	if err != nil {
@@ -361,8 +366,8 @@ func (c *GraphAPIClient) GetAvailability(userEmail string, startTime, endTime ti
 		})
 	}
 
-	// Calculate free slots (simplified - assumes 9 AM to 5 PM working hours)
-	freeSlots := calculateFreeSlots(startTime, endTime, busySlots)
+	// Calculate free slots filtered by working hours in the specified timezone
+	freeSlots := calculateFreeSlots(startTime, endTime, busySlots, timezone)
 
 	// Calculate total times
 	totalBusyTime := 0
@@ -375,23 +380,39 @@ func (c *GraphAPIClient) GetAvailability(userEmail string, startTime, endTime ti
 		totalFreeTime += int(slot.End.Sub(slot.Start).Minutes())
 	}
 
+	// Determine actual working hours based on free slots
+	workingHoursStart := startTime
+	workingHoursEnd := endTime
+	if len(freeSlots) > 0 {
+		workingHoursStart = freeSlots[0].Start
+		workingHoursEnd = freeSlots[len(freeSlots)-1].End
+	}
+
+	// Ensure arrays are never nil (return empty slices)
+	if freeSlots == nil {
+		freeSlots = []models.TimeSlot{}
+	}
+	if busySlots == nil {
+		busySlots = []models.TimeSlot{}
+	}
+
 	return models.AvailabilityResponse{
 		UserEmail: userEmail,
 		FreeSlots: freeSlots,
 		BusySlots: busySlots,
 		WorkingHours: models.TimeSlot{
-			Start: startTime,
-			End:   endTime,
+			Start: workingHoursStart,
+			End:   workingHoursEnd,
 		},
 		TotalFreeTime: totalFreeTime,
 		TotalBusyTime: totalBusyTime,
 	}, nil
 }
 
-// calculateFreeSlots calculates free time slots between busy slots
-func calculateFreeSlots(startTime, endTime time.Time, busySlots []models.TimeSlot) []models.TimeSlot {
+// calculateFreeSlots calculates free time slots between busy slots, filtered by working hours
+func calculateFreeSlots(startTime, endTime time.Time, busySlots []models.TimeSlot, timezone string) []models.TimeSlot {
 	if len(busySlots) == 0 {
-		return []models.TimeSlot{{Start: startTime, End: endTime}}
+		return filterByWorkingHours([]models.TimeSlot{{Start: startTime, End: endTime}}, timezone)
 	}
 
 	// Sort busy slots by start time
@@ -425,5 +446,131 @@ func calculateFreeSlots(startTime, endTime time.Time, busySlots []models.TimeSlo
 		})
 	}
 
-	return freeSlots
+	return filterByWorkingHours(freeSlots, timezone)
+}
+
+// filterByWorkingHours filters time slots to prioritize standard working hours (9am-6pm)
+// and extends to 7am-11pm if no slots are available during standard hours
+// If timezone is provided (IANA format like "Asia/Kolkata"), working hours are applied in that timezone
+func filterByWorkingHours(slots []models.TimeSlot, timezone string) []models.TimeSlot {
+	const (
+		standardStart = 9  // 9 AM
+		standardEnd   = 18 // 6 PM
+		extendedStart = 7  // 7 AM
+		extendedEnd   = 23 // 11 PM
+	)
+
+	// Load timezone location
+	var loc *time.Location
+	var err error
+	if timezone != "" {
+		loc, err = time.LoadLocation(timezone)
+		if err != nil {
+			// Fallback to UTC if timezone is invalid
+			loc = time.UTC
+		}
+	} else {
+		loc = time.UTC
+	}
+
+	var standardHoursSlots []models.TimeSlot
+	var extendedHoursSlots []models.TimeSlot
+
+	for _, slot := range slots {
+		// Convert slot times to the target timezone
+		slotStartInTZ := slot.Start.In(loc)
+		slotEndInTZ := slot.End.In(loc)
+
+		// Process each day in the slot separately
+		current := slotStartInTZ
+		for current.Before(slotEndInTZ) {
+			dayStart := time.Date(current.Year(), current.Month(), current.Day(), 0, 0, 0, 0, loc)
+			dayEnd := dayStart.AddDate(0, 0, 1)
+
+			// Skip weekends (Saturday = 6, Sunday = 0)
+			weekday := current.Weekday()
+			if weekday == time.Saturday || weekday == time.Sunday {
+				current = dayEnd
+				continue
+			}
+
+			// Standard working hours for this day (in target timezone)
+			standardDayStart := time.Date(current.Year(), current.Month(), current.Day(), standardStart, 0, 0, 0, loc)
+			standardDayEnd := time.Date(current.Year(), current.Month(), current.Day(), standardEnd, 0, 0, 0, loc)
+
+			// Extended working hours for this day (in target timezone)
+			extendedDayStart := time.Date(current.Year(), current.Month(), current.Day(), extendedStart, 0, 0, 0, loc)
+			extendedDayEnd := time.Date(current.Year(), current.Month(), current.Day(), extendedEnd, 0, 0, 0, loc)
+
+			slotStart := current
+			slotEnd := slotEndInTZ
+			if slotEnd.After(dayEnd) {
+				slotEnd = dayEnd
+			}
+
+			// Check for standard hours overlap
+			if slotStart.Before(standardDayEnd) && slotEnd.After(standardDayStart) {
+				overlapStart := slotStart
+				if overlapStart.Before(standardDayStart) {
+					overlapStart = standardDayStart
+				}
+				overlapEnd := slotEnd
+				if overlapEnd.After(standardDayEnd) {
+					overlapEnd = standardDayEnd
+				}
+				if overlapStart.Before(overlapEnd) {
+					standardHoursSlots = append(standardHoursSlots, models.TimeSlot{
+						Start: overlapStart,
+						End:   overlapEnd,
+					})
+				}
+			}
+
+			// Check for extended hours overlap (excluding standard hours)
+			// Before standard hours (7am-9am)
+			if slotStart.Before(standardDayStart) && slotEnd.After(extendedDayStart) {
+				overlapStart := slotStart
+				if overlapStart.Before(extendedDayStart) {
+					overlapStart = extendedDayStart
+				}
+				overlapEnd := slotEnd
+				if overlapEnd.After(standardDayStart) {
+					overlapEnd = standardDayStart
+				}
+				if overlapStart.Before(overlapEnd) {
+					extendedHoursSlots = append(extendedHoursSlots, models.TimeSlot{
+						Start: overlapStart,
+						End:   overlapEnd,
+					})
+				}
+			}
+
+			// After standard hours (6pm-11pm)
+			if slotStart.Before(extendedDayEnd) && slotEnd.After(standardDayEnd) {
+				overlapStart := slotStart
+				if overlapStart.Before(standardDayEnd) {
+					overlapStart = standardDayEnd
+				}
+				overlapEnd := slotEnd
+				if overlapEnd.After(extendedDayEnd) {
+					overlapEnd = extendedDayEnd
+				}
+				if overlapStart.Before(overlapEnd) {
+					extendedHoursSlots = append(extendedHoursSlots, models.TimeSlot{
+						Start: overlapStart,
+						End:   overlapEnd,
+					})
+				}
+			}
+
+			// Move to next day
+			current = dayEnd
+		}
+	}
+
+	// Return standard hours if available, otherwise extended hours
+	if len(standardHoursSlots) > 0 {
+		return standardHoursSlots
+	}
+	return extendedHoursSlots
 }
