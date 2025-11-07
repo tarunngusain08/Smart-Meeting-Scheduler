@@ -1,6 +1,6 @@
 module Smart-Meeting-Scheduler
 
-go 1.25.1
+go 1.25.0
 
 require (
 	github.com/coreos/go-oidc v2.4.0+incompatible
