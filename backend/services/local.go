@@ -297,38 +297,47 @@ func (m *MockGraphClient) GetAvailabilityWithTimezone(userEmail string, startTim
 	}
 
 	// Calculate free slots filtered by working hours in the specified timezone
-	freeSlots := calculateFreeSlots(startTime, endTime, busySlots, timezone)
+	standardSlots, extendedSlots := calculateFreeSlots(startTime, endTime, busySlots, timezone)
 
 	totalBusyTime := 0
 	for _, slot := range busySlots {
 		totalBusyTime += int(slot.End.Sub(slot.Start).Minutes())
 	}
 
+	// Calculate total free time for standard hours
 	totalFreeTime := 0
-	for _, slot := range freeSlots {
+	for _, slot := range standardSlots {
 		totalFreeTime += int(slot.End.Sub(slot.Start).Minutes())
 	}
 
-	// Determine actual working hours based on free slots
+	// Determine actual working hours based on standard free slots
 	workingHoursStart := startTime
 	workingHoursEnd := endTime
-	if len(freeSlots) > 0 {
-		workingHoursStart = freeSlots[0].Start
-		workingHoursEnd = freeSlots[len(freeSlots)-1].End
+	if len(standardSlots) > 0 {
+		workingHoursStart = standardSlots[0].Start
+		workingHoursEnd = standardSlots[len(standardSlots)-1].End
+	} else if len(extendedSlots) > 0 {
+		// If no standard slots, use extended slots for working hours
+		workingHoursStart = extendedSlots[0].Start
+		workingHoursEnd = extendedSlots[len(extendedSlots)-1].End
 	}
 
 	// Ensure arrays are never nil (return empty slices)
-	if freeSlots == nil {
-		freeSlots = []models.TimeSlot{}
+	if standardSlots == nil {
+		standardSlots = []models.TimeSlot{}
+	}
+	if extendedSlots == nil {
+		extendedSlots = []models.TimeSlot{}
 	}
 	if busySlots == nil {
 		busySlots = []models.TimeSlot{}
 	}
 
 	return models.AvailabilityResponse{
-		UserEmail: userEmail,
-		FreeSlots: freeSlots,
-		BusySlots: busySlots,
+		UserEmail:          userEmail,
+		FreeSlots:          standardSlots,
+		ExtendedHoursSlots: extendedSlots,
+		BusySlots:          busySlots,
 		WorkingHours: models.TimeSlot{
 			Start: workingHoursStart,
 			End:   workingHoursEnd,
@@ -367,7 +376,9 @@ func (m *MockGraphClient) findCommonFreeSlots(busySlots map[string][]models.Time
 	}
 
 	// Calculate free slots (no timezone filtering for FindMeetingTimes)
-	freeSlots := calculateFreeSlots(startTime, endTime, allBusySlots, "")
+	standardSlots, extendedSlots := calculateFreeSlots(startTime, endTime, allBusySlots, "")
+	// For FindMeetingTimes, combine both standard and extended slots
+	freeSlots := append(standardSlots, extendedSlots...)
 
 	// Find slots that fit the duration
 	var suggestions []models.MeetingSuggestion
