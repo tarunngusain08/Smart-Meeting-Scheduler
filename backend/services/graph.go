@@ -367,7 +367,7 @@ func (c *GraphAPIClient) GetAvailabilityWithTimezone(userEmail string, startTime
 	}
 
 	// Calculate free slots filtered by working hours in the specified timezone
-	freeSlots := calculateFreeSlots(startTime, endTime, busySlots, timezone)
+	standardSlots, extendedSlots := calculateFreeSlots(startTime, endTime, busySlots, timezone)
 
 	// Calculate total times
 	totalBusyTime := 0
@@ -375,31 +375,46 @@ func (c *GraphAPIClient) GetAvailabilityWithTimezone(userEmail string, startTime
 		totalBusyTime += int(slot.End.Sub(slot.Start).Minutes())
 	}
 
+	// Calculate total free time for standard hours
 	totalFreeTime := 0
-	for _, slot := range freeSlots {
+	for _, slot := range standardSlots {
 		totalFreeTime += int(slot.End.Sub(slot.Start).Minutes())
 	}
 
-	// Determine actual working hours based on free slots
+	// Calculate total free time for extended hours
+	totalExtendedFreeTime := 0
+	for _, slot := range extendedSlots {
+		totalExtendedFreeTime += int(slot.End.Sub(slot.Start).Minutes())
+	}
+
+	// Determine actual working hours based on standard free slots
 	workingHoursStart := startTime
 	workingHoursEnd := endTime
-	if len(freeSlots) > 0 {
-		workingHoursStart = freeSlots[0].Start
-		workingHoursEnd = freeSlots[len(freeSlots)-1].End
+	if len(standardSlots) > 0 {
+		workingHoursStart = standardSlots[0].Start
+		workingHoursEnd = standardSlots[len(standardSlots)-1].End
+	} else if len(extendedSlots) > 0 {
+		// If no standard slots, use extended slots for working hours
+		workingHoursStart = extendedSlots[0].Start
+		workingHoursEnd = extendedSlots[len(extendedSlots)-1].End
 	}
 
 	// Ensure arrays are never nil (return empty slices)
-	if freeSlots == nil {
-		freeSlots = []models.TimeSlot{}
+	if standardSlots == nil {
+		standardSlots = []models.TimeSlot{}
+	}
+	if extendedSlots == nil {
+		extendedSlots = []models.TimeSlot{}
 	}
 	if busySlots == nil {
 		busySlots = []models.TimeSlot{}
 	}
 
 	return models.AvailabilityResponse{
-		UserEmail: userEmail,
-		FreeSlots: freeSlots,
-		BusySlots: busySlots,
+		UserEmail:          userEmail,
+		FreeSlots:          standardSlots,
+		ExtendedHoursSlots: extendedSlots,
+		BusySlots:          busySlots,
 		WorkingHours: models.TimeSlot{
 			Start: workingHoursStart,
 			End:   workingHoursEnd,
@@ -410,9 +425,11 @@ func (c *GraphAPIClient) GetAvailabilityWithTimezone(userEmail string, startTime
 }
 
 // calculateFreeSlots calculates free time slots between busy slots, filtered by working hours
-func calculateFreeSlots(startTime, endTime time.Time, busySlots []models.TimeSlot, timezone string) []models.TimeSlot {
+// Returns standard hours slots and extended hours slots separately
+func calculateFreeSlots(startTime, endTime time.Time, busySlots []models.TimeSlot, timezone string) ([]models.TimeSlot, []models.TimeSlot) {
 	if len(busySlots) == 0 {
-		return filterByWorkingHours([]models.TimeSlot{{Start: startTime, End: endTime}}, timezone)
+		filtered := filterByWorkingHours([]models.TimeSlot{{Start: startTime, End: endTime}}, timezone)
+		return filtered.Standard, filtered.Extended
 	}
 
 	// Sort busy slots by start time
@@ -446,13 +463,17 @@ func calculateFreeSlots(startTime, endTime time.Time, busySlots []models.TimeSlo
 		})
 	}
 
-	return filterByWorkingHours(freeSlots, timezone)
+	filtered := filterByWorkingHours(freeSlots, timezone)
+	return filtered.Standard, filtered.Extended
 }
 
-// filterByWorkingHours filters time slots to prioritize standard working hours (9am-6pm)
-// and extends to 7am-11pm if no slots are available during standard hours
+// filterByWorkingHours filters time slots into standard (9am-6pm) and extended (7-9am, 6-11pm) hours
 // If timezone is provided (IANA format like "Asia/Kolkata"), working hours are applied in that timezone
-func filterByWorkingHours(slots []models.TimeSlot, timezone string) []models.TimeSlot {
+// Returns both standard and extended hours slots separately
+func filterByWorkingHours(slots []models.TimeSlot, timezone string) struct {
+	Standard []models.TimeSlot
+	Extended []models.TimeSlot
+} {
 	const (
 		standardStart = 9  // 9 AM
 		standardEnd   = 18 // 6 PM
@@ -568,9 +589,13 @@ func filterByWorkingHours(slots []models.TimeSlot, timezone string) []models.Tim
 		}
 	}
 
-	// Return standard hours if available, otherwise extended hours
-	if len(standardHoursSlots) > 0 {
-		return standardHoursSlots
+	// Return both standard and extended hours slots separately
+	// Frontend will decide which to show based on user preference
+	return struct {
+		Standard []models.TimeSlot
+		Extended []models.TimeSlot
+	}{
+		Standard: standardHoursSlots,
+		Extended: extendedHoursSlots,
 	}
-	return extendedHoursSlots
 }
