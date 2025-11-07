@@ -63,6 +63,7 @@ func CalendarAvailability(cfg *config.Config) gin.HandlerFunc {
 			Email     string    `json:"email" binding:"required"`
 			StartTime time.Time `json:"startTime" binding:"required"`
 			EndTime   time.Time `json:"endTime" binding:"required"`
+			TimeZone  string    `json:"timeZone"` // Optional: IANA timezone (e.g., "Asia/Kolkata")
 		}
 
 		if err := c.BindJSON(&req); err != nil {
@@ -70,11 +71,20 @@ func CalendarAvailability(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
+		// Validate email - reject placeholder/test emails
+		if req.Email == "user@example.com" || req.Email == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Invalid email address",
+				"message": "Please use your authenticated email address to check availability",
+			})
+			return
+		}
+
 		// Get the appropriate client
 		client := getGraphClient(accessToken, cfg)
 
-		// Check availability
-		availability, err := client.GetAvailability(req.Email, req.StartTime, req.EndTime)
+		// Check availability with timezone
+		availability, err := client.GetAvailabilityWithTimezone(req.Email, req.StartTime, req.EndTime, req.TimeZone)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error":   "Failed to check availability",
