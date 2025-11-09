@@ -1,0 +1,24 @@
+# Go build artifacts
+*.test
+*.out
+main
+Smart-Meeting-Scheduler
+
+# IDE
+.vscode
+.idea
+
+# Git
+.git
+.gitignore
+
+# Docs
+*.md
+README.md
+
+# Logs
+*.log
+
+# Environment (will be copied separately if needed)
+.env.local
+
