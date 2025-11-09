@@ -54,3 +54,4 @@ __pycache__/
 .env.*
 backend/env.env
 ui/env.env
+docker-compose.yml
