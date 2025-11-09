@@ -1,0 +1,26 @@
+# Backend .dockerignore
+node_modules
+*.md
+.git
+.gitignore
+.env
+*.log
+dist
+build
+coverage
+.vscode
+.idea
+
+# Go specific
+*.test
+*.out
+main
+Smart-Meeting-Scheduler
+
+# UI specific
+ui/node_modules
+ui/dist
+ui/build
+ui/.env.local
+ui/.env.*.local
+
