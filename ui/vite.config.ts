@@ -56,10 +56,18 @@ export default defineConfig({
     port: 3000,
     open: true,
     proxy: {
-      // 👇 Add this to also proxy auth endpoints
+      // Proxy auth endpoints except /auth/callback (handled by frontend React route)
       '/auth': {
         target: 'http://localhost:8080',
         changeOrigin: true,
+        bypass(req) {
+          // Don't proxy /auth/callback - let frontend React router handle it
+          if (req.url?.startsWith('/auth/callback')) {
+            return req.url; // Bypass proxy, serve from dev server
+          }
+          // Proxy all other /auth/* requests to backend
+          return false;
+        },
       },
       '/graph': {
         target: 'http://localhost:8080',
