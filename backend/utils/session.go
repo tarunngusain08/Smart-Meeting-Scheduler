@@ -78,7 +78,7 @@ func refreshSession(session models.Session) (models.Session, error) {
 	data.Set("client_secret", os.Getenv("CLIENT_SECRET"))
 	data.Set("refresh_token", session.RefreshToken)
 	data.Set("grant_type", "refresh_token")
-	data.Set("scope", "openid profile email offline_access User.Read Calendars.Read")
+	data.Set("scope", "openid profile email offline_access User.Read Calendars.Read Calendars.ReadWrite")
 
 	tokenEndpoint := os.Getenv("OAUTH_TOKEN_ENDPOINT")
 	if tokenEndpoint == "" {
