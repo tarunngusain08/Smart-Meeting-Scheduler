@@ -42,7 +42,7 @@ export function Header({ darkMode, onToggleDarkMode, onLogout }: HeaderProps) {
           </div>
           <div>
             <h1 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">
-              Gruve Scheduler
+              Gruve Meeting Scheduler
             </h1>
             <p className="text-xs text-gray-600 dark:text-gray-300">AI-powered meeting assistant</p>
           </div>
