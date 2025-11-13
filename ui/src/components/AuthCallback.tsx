@@ -1,41 +1,60 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export function AuthCallback() {
+export function AuthCallback(): JSX.Element {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
+  const [loadingMessage, setLoadingMessage] = useState<string>('Authenticating...');
 
   useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
     const handleCallback = async () => {
       try {
-        // Get the code and state from URL parameters
+        setLoadingMessage('Reading authorization response...');
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get('code');
         const state = urlParams.get('state');
 
         if (!code) {
-          throw new Error('No authorization code received from Microsoft Teams');
+          throw new Error('No authorization code received from Microsoft Teams.');
         }
 
-        // Exchange the code for tokens using the backend endpoint
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-        const response = await fetch(`${backendUrl}/auth/callback`, {
+        setLoadingMessage('Exchanging authorization code for tokens...');
+        const backendUrl = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:8080';
+
+        const resp = await fetch(`${backendUrl}/auth/callback`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code, state }),
-          credentials: 'include', // Important for cookie handling
+          credentials: 'include', // important for cookies
+          signal: controller.signal,
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to exchange code for tokens');
+        // Handle backend errors clearly
+        if (!resp.ok) {
+          let errText: string;
+          try {
+            const errJson = await resp.json();
+            errText = errJson?.error ?? JSON.stringify(errJson);
+          } catch {
+            errText = await resp.text();
+          }
+          throw new Error(`Token exchange failed (${resp.status}): ${errText || resp.statusText}`);
         }
 
-        const authData = await response.json();
+        let authData: any;
+        try {
+          authData = await resp.json();
+        } catch {
+          throw new Error('Backend returned invalid JSON.');
+        }
+
+        if (!isMounted) return;
         console.log('Auth response:', authData);
-        
-        // Store the session and user data
+
+        // Persist minimal session info (for convenience, but server cookie is source of truth)
         if (authData.user) {
           localStorage.setItem('user', JSON.stringify(authData.user));
         }
@@ -44,25 +63,66 @@ export function AuthCallback() {
           console.log('Session ID stored:', authData.sessionId);
         }
 
-        // Add a small delay to ensure storage is complete
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Verify session is set on server by calling /auth/me
+        setLoadingMessage('Verifying session...');
+        try {
+          const verifyResp = await fetch(`${backendUrl}/auth/me`, {
+            method: 'GET',
+            credentials: 'include', // Important: sends cookies
+            headers: {
+              'Accept': 'application/json',
+            },
+            signal: controller.signal,
+          });
 
-        // Dispatch custom event to notify App component
-        window.dispatchEvent(new Event('auth-success'));
-        
-        // Navigate to chat interface
-        console.log('Redirecting to chat interface...');
-        navigate('/chat', { replace: true });
-      } catch (error) {
-        console.error('Error processing auth callback:', error);
-        setError(error instanceof Error ? error.message : 'Authentication failed');
+          if (!verifyResp.ok) {
+            throw new Error(`Session verification failed (${verifyResp.status})`);
+          }
+
+          const verifyData = await verifyResp.json();
+          if (!verifyData.user) {
+            throw new Error('Session verification returned no user data');
+          }
+
+          console.log('Session verified successfully:', verifyData.user);
+          
+          // Update localStorage with verified user data
+          localStorage.setItem('user', JSON.stringify(verifyData.user));
+
+          // Dispatch custom event so App can re-check auth
+          window.dispatchEvent(new Event('auth-success'));
+
+          // Give App.tsx a moment to process the auth-success event and update state
+          // Then navigate to /chat
+          setTimeout(() => {
+            if (isMounted) {
+              console.log('Navigating to /chat after session verification');
+              navigate('/chat', { replace: true });
+            }
+          }, 300);
+        } catch (verifyErr: any) {
+          if (!isMounted) return;
+          console.error('Session verification failed:', verifyErr);
+          throw new Error(`Failed to verify session: ${verifyErr.message}`);
+        }
+
+      } catch (err: any) {
+        if (!isMounted) return;
+        console.error('Error processing auth callback:', err);
+        setError(err instanceof Error ? err.message : String(err));
+        setLoadingMessage('Redirecting to home...');
         setTimeout(() => {
-          navigate('/', { replace: true });
+          if (isMounted) navigate('/', { replace: true });
         }, 3000);
       }
     };
 
     handleCallback();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
   }, [navigate]);
 
   if (error) {
@@ -71,7 +131,7 @@ export function AuthCallback() {
         <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md">
           <div className="text-red-500 text-5xl mb-4">⚠️</div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Authentication Error</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <p className="text-gray-600 mb-4 break-words">{error}</p>
           <p className="text-sm text-gray-500">Redirecting to home page...</p>
         </div>
       </div>
@@ -81,11 +141,10 @@ export function AuthCallback() {
   return (
     <div className="flex items-center justify-center h-screen bg-gradient-to-br from-gray-50 via-white to-green-50">
       <div className="text-center">
-        {/* <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#00B140] mx-auto mb-4"></div>
-        <p className="text-lg font-medium text-gray-700">Authenticating with Microsoft Teams...</p>
-        <p className="text-sm text-gray-500 mt-2">Please wait</p> */}
+        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#00B140] mx-auto mb-4"></div>
+        <p className="text-lg font-medium text-gray-700">{loadingMessage}</p>
+        <p className="text-sm text-gray-500 mt-2">Please wait...</p>
       </div>
     </div>
   );
 }
-
