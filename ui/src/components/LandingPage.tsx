@@ -209,7 +209,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
       {/* Footer */}
       <footer className="relative z-10 w-full max-w-7xl mx-auto px-6 py-8 mt-16 text-center">
         <p className="text-sm text-[#6B7280]">
-          © 2025 Gruve Scheduler. All rights reserved.
+          © 2025 Gruve Meeting Scheduler. All rights reserved.
         </p>
       </footer>
 

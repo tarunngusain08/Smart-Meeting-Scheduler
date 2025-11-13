@@ -13,7 +13,7 @@ interface ChatResponse {
 }
 
 export async function handleUserPrompt(chatInput: string): Promise<string> {
-  const response = await fetch(import.meta.env.VITE_CHAT_API_URL || 'https://radhey.app.n8n.cloud/webhook/handle-user-prompt', {
+  const response = await fetch(import.meta.env.VITE_CHAT_API_URL || 'https://shreeradhe.app.n8n.cloud/webhook/handle-user-prompt', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

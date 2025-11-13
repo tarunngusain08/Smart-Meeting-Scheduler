@@ -55,3 +55,4 @@ __pycache__/
 backend/env.env
 ui/env.env
 docker-compose.yml
+docker-compose.override.yml

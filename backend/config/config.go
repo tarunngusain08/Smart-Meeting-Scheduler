@@ -50,6 +50,9 @@ type Config struct {
 	MeetingSlotsAPIURL  string
 	TeamsMeetingBaseURL string
 	Port                string
+	CookieDomain        string
+	Env                 string
+	BackendURL          string
 	Provider            *oidc.Provider
 	OAuth2Config        *oauth2.Config
 	Verifier            *oidc.IDTokenVerifier
@@ -89,11 +92,11 @@ func LoadConfig() *Config {
 	}
 	tokenEndpoint := os.Getenv("OAUTH_TOKEN_ENDPOINT")
 	if tokenEndpoint == "" {
-		tokenEndpoint = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+		tokenEndpoint = "https://login.microsoftonline.com/" + clientID + "/oauth2/v2.0/token"
 	}
 	meetingSlotsAPIURL := os.Getenv("MEETING_SLOTS_API_URL")
 	if meetingSlotsAPIURL == "" {
-		meetingSlotsAPIURL = "https://shreeradhey.app.n8n.cloud/webhook/find-meeting-slots"
+		meetingSlotsAPIURL = "https://shreeradhe.app.n8n.cloud/webhook/find-meeting-slots"
 	}
 	teamsMeetingBaseURL := strings.TrimRight(os.Getenv("TEAMS_MEETING_BASE_URL"), "/")
 	if teamsMeetingBaseURL == "" {
@@ -138,7 +141,7 @@ func LoadConfig() *Config {
 		ClientSecret: clientSecret,
 		RedirectURL:  redirectURI,
 		Endpoint:     endpoint,
-		Scopes:       []string{"openid", "profile", "email", "offline_access", "User.Read", "User.ReadBasic.All", "Calendars.Read"},
+		Scopes:       []string{"openid", "profile", "email", "offline_access", "User.Read", "User.ReadBasic.All", "Calendars.Read", "Calendars.ReadWrite"},
 	}
 
 	// Initialize database connection for mock mode
@@ -157,6 +160,10 @@ func LoadConfig() *Config {
 		}
 	}
 
+	cookieDomain := os.Getenv("COOKIE_DOMAIN")
+	env := os.Getenv("ENV")
+	backendURL := os.Getenv("BACKEND_URL")
+
 	return &Config{
 		ClientID:            clientID,
 		ClientSecret:        clientSecret,
@@ -169,6 +176,9 @@ func LoadConfig() *Config {
 		MeetingSlotsAPIURL:  meetingSlotsAPIURL,
 		TeamsMeetingBaseURL: teamsMeetingBaseURL,
 		Port:                port,
+		CookieDomain:        cookieDomain,
+		Env:                 env,
+		BackendURL:          backendURL,
 		Provider:            provider,
 		OAuth2Config:        oauth2Config,
 		Verifier:            verifier,

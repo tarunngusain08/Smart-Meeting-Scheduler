@@ -105,21 +105,53 @@ func (c *GraphAPIClient) GetCalendarView(userEmail string, startTime, endTime ti
 }
 
 // GetUserEvents retrieves all events for a user within a time range
+// Uses calendarView endpoint with startDateTime and endDateTime for proper time range filtering
+//
+// IMPORTANT PERMISSIONS NOTE:
+// - With Delegated permissions (user tokens): Can only access own calendar (/me) or shared calendars
+// - With Application permissions: Can access any user's calendar using client credentials token
+//
+// This function tries to use Application permissions (client credentials) when accessing other users' calendars
 func (c *GraphAPIClient) GetUserEvents(userEmail string, startTime, endTime time.Time) ([]models.Event, error) {
 	headers := abstractions.NewRequestHeaders()
-	headers.Add("Prefer", "outlook.timezone=\"Pacific Standard Time\"")
+	headers.Add("Prefer", "outlook.timezone=\"UTC\"")
 
-	params := &graphusers.ItemEventsRequestBuilderGetQueryParameters{
-		Select: []string{"subject", "bodyPreview", "organizer", "attendees", "start", "end", "location", "onlineMeeting"},
+	// Format times as RFC3339 strings for Graph API
+	startDateTime := startTime.Format(time.RFC3339)
+	endDateTime := endTime.Format(time.RFC3339)
+
+	params := &graphusers.ItemCalendarViewRequestBuilderGetQueryParameters{
+		StartDateTime: &startDateTime,
+		EndDateTime:   &endDateTime,
+		Select:        []string{"subject", "bodyPreview", "organizer", "attendees", "start", "end", "location", "onlineMeeting"},
 	}
-	config := &graphusers.ItemEventsRequestBuilderGetRequestConfiguration{
+	config := &graphusers.ItemCalendarViewRequestBuilderGetRequestConfiguration{
 		Headers:         headers,
 		QueryParameters: params,
 	}
 
-	eventsResp, err := c.Client.Users().ByUserId(userEmail).Events().Get(context.Background(), config)
+	// Try with current token (delegated/user token) first
+	eventsResp, err := c.Client.Users().ByUserId(userEmail).CalendarView().Get(context.Background(), config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user events: %v", err)
+		// If it fails, try using Application permissions (client credentials token)
+		// This allows accessing any user's calendar if Application permissions are granted
+		if c.Config != nil {
+			appToken, appErr := c.Config.GetAccessToken()
+			if appErr == nil && appToken != "" {
+				// Create a new client with application token
+				appClient := InitializeGraphClient(appToken)
+				eventsResp, err = appClient.Users().ByUserId(userEmail).CalendarView().Get(context.Background(), config)
+				if err == nil {
+					// Success with application token
+				} else {
+					return nil, fmt.Errorf("failed to get user events for %s with both delegated and application tokens: %v. Ensure Application permissions (Calendars.Read) are granted and admin consent is provided", userEmail, err)
+				}
+			} else {
+				return nil, fmt.Errorf("failed to get user events for %s: %v. Also failed to get application token: %v. With delegated permissions, you can only access your own calendar (/me) or calendars shared with you. To access other users' calendars, ensure Application permissions (Calendars.Read) are granted", userEmail, err, appErr)
+			}
+		} else {
+			return nil, fmt.Errorf("failed to get user events for %s: %v. With delegated permissions, you can only access your own calendar (/me) or calendars shared with you. To access other users' calendars, you need Application permissions (Calendars.Read) with admin consent", userEmail, err)
+		}
 	}
 
 	var events []models.Event
@@ -321,7 +353,10 @@ func (c *GraphAPIClient) CreateCalendarEvent(organizer string, event models.Crea
 		body.SetOnlineMeetingProvider(&onlineMeetingProvider)
 	}
 
-	resp, err := c.Client.Users().ByUserId(organizer).Events().Post(context.Background(), body, nil)
+	// Use /me/events endpoint for authenticated user's calendar
+	// The access token is scoped to the authenticated user, so /me/events is most reliable
+	// The organizer parameter is metadata - the event is created in the authenticated user's calendar
+	resp, err := c.Client.Me().Events().Post(context.Background(), body, nil)
 	if err != nil {
 		return models.Event{}, fmt.Errorf("failed to create calendar event: %v", err)
 	}

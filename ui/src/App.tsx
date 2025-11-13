@@ -16,50 +16,59 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is authenticated by checking for session_id
-    const checkAuth = () => {
-      const sessionId = localStorage.getItem('session_id');
-      const user = localStorage.getItem('user');
-      
-      console.log('Checking authentication...', { sessionId: !!sessionId, user: !!user });
-      
-      // Only consider authenticated if BOTH session_id and user exist
-      if (sessionId && user) {
-        try {
-          const userData = JSON.parse(user);
-          console.log('User authenticated:', userData);
-          setIsAuthenticated(true);
-        } catch (error) {
-          console.error('Invalid user data in localStorage:', error);
+    // Check authentication by calling backend /auth/me endpoint
+    // This uses the server-side session cookie as the single source of truth
+    const checkAuth = async () => {
+      try {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:8080';
+        const resp = await fetch(`${backendUrl}/auth/me`, {
+          method: 'GET',
+          credentials: 'include', // Important: sends cookies
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.user) {
+            console.log('User authenticated via server:', data.user);
+            // Store user info in localStorage for convenience (but server cookie is source of truth)
+            localStorage.setItem('user', JSON.stringify(data.user));
+            setIsAuthenticated(true);
+          } else {
+            setIsAuthenticated(false);
+          }
+        } else {
+          // Not authenticated - clear any stale localStorage data
+          console.log('Not authenticated (server returned', resp.status, ')');
           localStorage.removeItem('session_id');
           localStorage.removeItem('user');
           setIsAuthenticated(false);
         }
-      } else {
-        console.log('No valid authentication found - showing landing page');
-        // Clear any partial data
+      } catch (error) {
+        console.error('Error checking authentication:', error);
+        // On error, assume not authenticated
         localStorage.removeItem('session_id');
         localStorage.removeItem('user');
         setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     checkAuth();
 
-    // Listen for storage changes (for when AuthCallback updates localStorage)
-    const handleStorageChange = () => {
+    // Listen for custom event from AuthCallback when auth succeeds
+    const handleAuthSuccess = () => {
+      // Re-check auth state from server
       checkAuth();
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Also listen for custom event from AuthCallback
-    window.addEventListener('auth-success', handleStorageChange);
+    window.addEventListener('auth-success', handleAuthSuccess);
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('auth-success', handleStorageChange);
+      window.removeEventListener('auth-success', handleAuthSuccess);
     };
   }, []);
 

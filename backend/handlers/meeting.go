@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -73,6 +74,40 @@ func fetchUserEmail(accessToken string, cfg *config.Config) (string, error) {
 	return "", fmt.Errorf("no email found in user profile")
 }
 
+// resolveToEmailAddress resolves a display name or email to an actual email address
+// If the input is already an email (contains @), returns it as-is
+// Otherwise, searches for users matching the display name and returns the first match's email
+func resolveToEmailAddress(input string, userService services.UserService) string {
+	// If it's already an email address, return it
+	if strings.Contains(input, "@") {
+		return input
+	}
+
+	// If no user service available, return empty
+	if userService == nil {
+		return ""
+	}
+
+	// Search for users matching the display name
+	users, err := userService.SearchUsers(input)
+	if err != nil || len(users) == 0 {
+		return ""
+	}
+
+	// Return the first matching user's email
+	// Prefer mail field, fallback to userPrincipalName
+	for _, user := range users {
+		if user.Email != "" {
+			return user.Email
+		}
+		if user.UserPrincipalName != "" {
+			return user.UserPrincipalName
+		}
+	}
+
+	return ""
+}
+
 // CreateMeeting creates a new calendar meeting
 func CreateMeeting(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -132,12 +167,22 @@ func CreateMeeting(cfg *config.Config) gin.HandlerFunc {
 		}
 
 		// Send meeting invitations to attendees asynchronously
-		// Only send custom invites if using mock mode (Graph API automatically sends invites)
+		// In real mode, Graph API automatically sends invites when creating events
+		// In mock mode or when using Outlook sender, send custom invites
 		mode := os.Getenv("GRAPH_MODE")
-		if mode != "real" {
-			// Using mock mode, send custom invites via email
+		mailMode := os.Getenv("MAIL_MODE")
+
+		if mode != "real" || mailMode == "outlook" {
+			// Using mock mode or Outlook sender, send custom invites
 			go func() {
-				sender := services.GetInviteSender()
+				var sender services.Sender
+
+				// Use token-aware factory for Outlook mode
+				if mailMode == "outlook" && accessToken != "" {
+					sender = services.GetInviteSenderWithToken(accessToken, organizer)
+				} else {
+					sender = services.GetInviteSender()
+				}
 
 				invite := &services.MeetingInvite{
 					Subject:     req.Subject,
@@ -210,16 +255,30 @@ func FindMeetingTimes(cfg *config.Config) gin.HandlerFunc {
 		// Get the appropriate client
 		client := getGraphClient(accessToken, cfg)
 
-		// Extract attendee emails from AttendeeWithTimezone structs
-		attendeeEmails := make([]string, len(req.Attendees))
-		for i, attendee := range req.Attendees {
-			attendeeEmails[i] = attendee.Email
+		// Resolve attendee display names to email addresses
+		// The Email field might contain display names instead of actual emails
+		userService, err := getUserService(cfg, c)
+		if err != nil {
+			log.Printf("Warning: Could not get user service: %v", err)
 		}
 
-		// Extract priority attendee emails from AttendeeWithTimezone structs
-		priorityAttendeeEmails := make([]string, len(req.PriorityAttendees))
-		for i, attendee := range req.PriorityAttendees {
-			priorityAttendeeEmails[i] = attendee.Email
+		attendeeEmails := make([]string, 0, len(req.Attendees))
+		for _, attendee := range req.Attendees {
+			email := resolveToEmailAddress(attendee.Email, userService)
+			if email != "" {
+				attendeeEmails = append(attendeeEmails, email)
+			} else {
+				log.Printf("Warning: Could not resolve email for attendee: %s", attendee.Email)
+			}
+		}
+
+		// Extract priority attendee emails
+		priorityAttendeeEmails := make([]string, 0, len(req.PriorityAttendees))
+		for _, attendee := range req.PriorityAttendees {
+			email := resolveToEmailAddress(attendee.Email, userService)
+			if email != "" {
+				priorityAttendeeEmails = append(priorityAttendeeEmails, email)
+			}
 		}
 
 		// Fetch calendar events for all participants (including organizer)
@@ -227,7 +286,7 @@ func FindMeetingTimes(cfg *config.Config) gin.HandlerFunc {
 		participantCalendars := make(map[string][]models.Event)
 
 		for _, participant := range allParticipants {
-			// client.GetUserEvents(participant, req.StartTime, req.EndTime)
+			// Use email address to fetch calendar events via Graph API
 			events, err := client.GetUserEvents(participant, req.StartTime, req.EndTime)
 			if err != nil {
 				log.Printf("Warning: Failed to fetch calendar for %s: %v", participant, err)
