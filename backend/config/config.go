@@ -50,6 +50,9 @@ type Config struct {
 	MeetingSlotsAPIURL  string
 	TeamsMeetingBaseURL string
 	Port                string
+	CookieDomain        string
+	Env                 string
+	BackendURL          string
 	Provider            *oidc.Provider
 	OAuth2Config        *oauth2.Config
 	Verifier            *oidc.IDTokenVerifier
@@ -157,6 +160,10 @@ func LoadConfig() *Config {
 		}
 	}
 
+	cookieDomain := os.Getenv("COOKIE_DOMAIN")
+	env := os.Getenv("ENV")
+	backendURL := os.Getenv("BACKEND_URL")
+
 	return &Config{
 		ClientID:            clientID,
 		ClientSecret:        clientSecret,
@@ -169,6 +176,9 @@ func LoadConfig() *Config {
 		MeetingSlotsAPIURL:  meetingSlotsAPIURL,
 		TeamsMeetingBaseURL: teamsMeetingBaseURL,
 		Port:                port,
+		CookieDomain:        cookieDomain,
+		Env:                 env,
+		BackendURL:          backendURL,
 		Provider:            provider,
 		OAuth2Config:        oauth2Config,
 		Verifier:            verifier,
